@@ -1,0 +1,1 @@
+CALL mvn "exec:java" "-Dexec.mainClass=com.predixcode.ui.GUI"

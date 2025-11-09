@@ -4,9 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import com.predixcode.core.colors.Black;
 import com.predixcode.core.colors.Color;
-import com.predixcode.core.colors.White;
 
 public abstract class Piece {
     public int x;
@@ -46,16 +44,13 @@ public abstract class Piece {
         'q', Queen::new
     );
 
-    private static final Color WHITE = new White();
-    private static final Color BLACK = new Black();
-
     // Build, color, and position a piece from a FEN character and board coords
     public static Piece initialize(char fenChar, int x, int y) {
         Supplier<Piece> sup = MATRIX.get(Character.toLowerCase(fenChar));
         if (sup == null) return null;
 
         Piece piece = sup.get();
-        piece.setColor(Character.isUpperCase(fenChar) ? WHITE : BLACK);
+        piece.setColor(Character.isUpperCase(fenChar) ? Color.WHITE : Color.BLACK);
         piece.setPosition(x, y);
         return piece;
     }
