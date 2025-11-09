@@ -1,11 +1,12 @@
 package com.predixcode.core.board.pieces;
 
-import com.predixcode.core.board.colors.Black;
-import com.predixcode.core.board.colors.Color;
-import com.predixcode.core.board.colors.White;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+
+import com.predixcode.core.colors.Black;
+import com.predixcode.core.colors.Color;
+import com.predixcode.core.colors.White;
 
 public abstract class Piece {
     public int x;
@@ -33,7 +34,7 @@ public abstract class Piece {
         return color.formatSymbol(fenSymbol);
     }
 
-    protected abstract List<Integer[]> getMoves();
+    protected abstract List<Integer[]> getMoves(int matrixX, int matrixY);
 
     // FEN Conversion
     protected static final Map<Character, Supplier<Piece>> MATRIX = Map.of(

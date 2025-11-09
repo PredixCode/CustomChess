@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.predixcode.core.board.colors.Color;
 import com.predixcode.core.board.pieces.King;
 import com.predixcode.core.board.pieces.Piece;
+import com.predixcode.core.colors.Color;
 
 public class Board {
     private int xMatrix = 8;
@@ -34,6 +34,35 @@ public class Board {
     public void setPieces(List<Piece> pieces) { this.pieces = pieces != null ? pieces : new ArrayList<>(); }
 
     public List<Piece> getPieces() { return pieces; }
+
+    public void move(String from, String to) {
+        int[] fromXY = FenAdapter.parseAlgebraicSquare(from);
+        int[] toXY = FenAdapter.parseAlgebraicSquare(to);
+        if (fromXY == null || toXY == null) throw new IllegalArgumentException("Invalid move coordinates");
+
+        Piece movingPiece = null;
+        for (Piece p : pieces) {
+            if (p.getX() == fromXY[0] && p.getY() == fromXY[1]) {
+                movingPiece = p;
+                break;
+            }
+        }
+        if (movingPiece == null) throw new IllegalArgumentException("No piece at source square: " + from);
+
+        // Simple move (no legality checks)
+        movingPiece.setPosition(toXY[0], toXY[1]);
+        nextTurn();
+    }
+
+    public void nextTurn() {
+        halfmove++; // Simplified; in real chess, reset on pawn move or capture
+        if (activeColor == Color.BLACK) {
+            fullmove++;
+        }
+        if (activeColor != null) {
+            activeColor = activeColor.opposite();
+        }
+    }
 
     @Override
     public String toString() {

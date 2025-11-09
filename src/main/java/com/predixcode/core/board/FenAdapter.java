@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.predixcode.core.board.colors.Color;
 import com.predixcode.core.board.pieces.King;
 import com.predixcode.core.board.pieces.Piece;
+import com.predixcode.core.colors.Color;
 
 public final class FenAdapter {
     private FenAdapter() {}
@@ -63,7 +63,7 @@ public final class FenAdapter {
         return pieces;
     }
 
-    private static int[] parseAlgebraicSquare(String sq) {
+    public static int[] parseAlgebraicSquare(String sq) {
         if (sq == null || "-".equals(sq)) return new int[]{-1, -1};
         if (sq.length() != 2) return new int[]{-1, -1};
         char file = sq.charAt(0); // a..h
@@ -74,7 +74,7 @@ public final class FenAdapter {
         return new int[]{x, y};
     }
 
-    private static void applyCastlingToKings(List<Piece> pieces, String castling) {
+    public static void applyCastlingToKings(List<Piece> pieces, String castling) {
         King whiteKing = null;
         King blackKing = null;
 

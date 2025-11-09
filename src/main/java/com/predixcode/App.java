@@ -1,7 +1,7 @@
 package com.predixcode;
 
+import com.predixcode.core.Game;
 import com.predixcode.core.board.Board;
-import com.predixcode.core.board.Game;
 
 public class App {
     public static void main(String[] args) {
