@@ -30,10 +30,15 @@ public class Board {
     // Setters used by FenAdapter
     public void setDimensions(int xMatrix, int yMatrix) { this.xMatrix = xMatrix; this.yMatrix = yMatrix; }
     public void setHalfmove(int halfmove) { this.halfmove = halfmove; }
+    public int getHalfmove() { return halfmove; }
     public void setFullmove(int fullmove) { this.fullmove = fullmove; }
+    public int getFullmove() { return fullmove; }
     public void setEnPassant(int[] enPassant) { this.enPassant = enPassant != null ? enPassant : new int[]{-1, -1}; }
     public void setActiveColor(Color activeColor) { this.activeColor = activeColor; }
     public void setPieces(List<Piece> pieces) { this.pieces = pieces != null ? pieces : new ArrayList<>(); }
+    public Color getActiveColor() { return activeColor; }
+    public String getCastlingString() { return currentCastlingString(); }
+    public String getEnPassantAlgebraic() { return toAlg(enPassant[0], enPassant[1]); }
 
     public List<Piece> getPieces() { return pieces; }
 
@@ -113,6 +118,36 @@ public class Board {
             }
         }
         return targets;
+    }
+
+    public String toFen() {
+        StringBuilder placement = new StringBuilder();
+        for (int row = 0; row < yMatrix; row++) {
+            int empty = 0;
+            for (int col = 0; col < xMatrix; col++) {
+                Piece piece = getPieceAt(col, row);
+                if (piece == null) {
+                    empty++;
+                } else {
+                    if (empty > 0) {
+                        placement.append(empty);
+                        empty = 0;
+                    }
+                    char c = piece.symbol().charAt(0);
+                    placement.append(c);
+                }
+            }
+            if (empty > 0) placement.append(empty);
+            if (row < yMatrix - 1) placement.append('/');
+        }
+
+        String side = (activeColor == com.predixcode.core.colors.Color.WHITE) ? "w" :
+                    (activeColor == com.predixcode.core.colors.Color.BLACK) ? "b" : "w";
+
+        String castling = getCastlingString();
+        String ep = getEnPassantAlgebraic();
+
+        return placement + " " + side + " " + castling + " " + ep + " " + halfmove + " " + fullmove;
     }
 
     // Helpers (Board-internal)

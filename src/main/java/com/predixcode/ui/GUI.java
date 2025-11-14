@@ -1,6 +1,7 @@
 package com.predixcode.ui;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -22,6 +23,7 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
@@ -54,18 +56,19 @@ public class GUI extends Application {
     private final Paint lastMoveColor = Paint.valueOf("#9FC76E80"); // translucent green
     private final Paint targetDotColor = Paint.valueOf("#3A7EFDCC");
 
+    private final List<String> moveHistory = new ArrayList<>();
+    private GameInfoPanel infoPanel;
+
     @Override
     public void start(Stage stage) throws Exception {
         board = Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-        // Base content size from your constants
         final double baseW = PADDING + SIZE * TILE + PADDING;
         final double baseH = PADDING + SIZE * TILE + PADDING;
 
-        // Root that centers children; no manual centering needed
-        javafx.scene.layout.StackPane root = new javafx.scene.layout.StackPane();
+        // Center area: scalable board content
+        javafx.scene.layout.StackPane center = new javafx.scene.layout.StackPane();
 
-        // Everything we draw goes inside this content group (scaled as one)
         Group content = new Group();
 
         Group boardGroup = new Group();
@@ -80,36 +83,45 @@ public class GUI extends Application {
         highlightLayer.setMouseTransparent(true);
         overlayLayer.setMouseTransparent(true);
 
-
         content.getChildren().add(boardGroup);
         content.getChildren().add(buildCoordinates());
 
-        root.getChildren().add(content);
+        center.getChildren().add(content);
 
-        
+        // Right panel
+        double panelWidth = 260;
+        infoPanel = new GameInfoPanel(panelWidth);
 
-        // Scene starts at base size; user can resize freely
-        Scene scene = new Scene(root, baseW, baseH);
+        // Root with right panel
+        BorderPane root = new BorderPane();
+        root.setCenter(center);
+        root.setRight(infoPanel);
+
+        // Scene with extra width for the panel
+        Scene scene = new Scene(root, baseW + panelWidth, baseH);
         stage.setTitle("Predix Chess • JavaFX");
         stage.setScene(scene);
         stage.setResizable(true);
         stage.show();
 
-        // Scale content to fit window (preserve aspect ratio), StackPane centers it
+        // Scale the board content to fit center area
         javafx.beans.binding.DoubleBinding scale = javafx.beans.binding.Bindings.createDoubleBinding(
             () -> {
-                double w = root.getWidth();
-                double h = root.getHeight();
-                if (w <= 0 || h <= 0) return 1.0; // before first layout pass
+                double w = center.getWidth();
+                double h = center.getHeight();
+                if (w <= 0 || h <= 0) return 1.0;
                 return Math.min(w / baseW, h / baseH);
             },
-            root.widthProperty(), root.heightProperty()
+            center.widthProperty(), center.heightProperty()
         );
         content.scaleXProperty().bind(scale);
         content.scaleYProperty().bind(scale);
 
         loadPieces();
         refreshPieces();
+
+        // Initial panel refresh
+        infoPanel.refresh(board, moveHistory);
     }
 
     private Pane buildSquares() {
@@ -283,16 +295,17 @@ public class GUI extends Application {
         clearHighlights();
 
         if (selected == null) {
-            Piece p = board.getPieceAt(x, y);
+            Piece p = board.getPieceAt(x, y); // use Board API
             if (p == null) return;
             selected = new int[] { x, y };
             highlightSelection(x, y);
-            legalTargets = board.getPseudoLegalTargets(p);
+            legalTargets = board.getPseudoLegalTargets(p); // Board generates targets
             highlightTargets(legalTargets);
         } else {
             Piece clicked = board.getPieceAt(x, y);
             Piece selPiece = board.getPieceAt(selected[0], selected[1]);
-            if (clicked != null && selPiece != null && sameColor(clicked, selPiece)) {
+            if (clicked != null && selPiece != null &&
+                sameColor(clicked, selPiece)) {
                 selected = new int[] { x, y };
                 highlightSelection(x, y);
                 legalTargets = board.getPseudoLegalTargets(clicked);
@@ -320,6 +333,12 @@ public class GUI extends Application {
                 lastTo = new int[]{x, y};
                 animateMove(selPiece, x, y, capturedNode);
                 board.move(fromAlg, toAlg);
+
+                // Record move and refresh panel
+                String ply = fromAlg + "-" + toAlg;
+                moveHistory.add(ply);
+                infoPanel.refresh(board, moveHistory);
+
             } catch (Exception ex) {
                 if (captured != null && !board.getPieces().contains(captured)) {
                     board.getPieces().add(captured);
