@@ -4,11 +4,11 @@ import java.util.Scanner;
 
 import com.predixcode.core.board.Board;
 
-public class Game {
+public class Console {
 
     private final Board board;
     
-    public Game(Board board) {
+    public Console(Board board) {
         this.board = board;
     }
 

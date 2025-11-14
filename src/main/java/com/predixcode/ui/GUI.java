@@ -1,8 +1,8 @@
 package com.predixcode.ui;
 
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,7 +36,7 @@ public class GUI extends Application {
     private static final int SIZE = 8;
     private static final double TILE = 88; // tile size in px
     private static final double PADDING = 24; // space for coordinates
-    private static final String THEME = "merida"; // folder under /pieces/
+    private static final String THEME = "neo"; // folder under /pieces/
 
     private Board board;
     private final Rectangle[][] squares = new Rectangle[SIZE][SIZE];
@@ -50,8 +50,6 @@ public class GUI extends Application {
     private Set<String> legalTargets = new HashSet<>();
     private int[] lastFrom = null, lastTo = null;
 
-    private final Paint lightColor = Paint.valueOf("#F0D9B5"); // wood-light
-    private final Paint darkColor = Paint.valueOf("#B58863");  // wood-dark
     private final Paint selectColor = Paint.valueOf("#F6F66980"); // translucent yellow
     private final Paint lastMoveColor = Paint.valueOf("#9FC76E80"); // translucent green
     private final Paint targetDotColor = Paint.valueOf("#3A7EFDCC");
@@ -60,27 +58,55 @@ public class GUI extends Application {
     public void start(Stage stage) throws Exception {
         board = Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-        Pane root = new Pane();
-        root.setPrefSize(PADDING + SIZE * TILE + PADDING, PADDING + SIZE * TILE + PADDING);
+        // Base content size from your constants
+        final double baseW = PADDING + SIZE * TILE + PADDING;
+        final double baseH = PADDING + SIZE * TILE + PADDING;
+
+        // Root that centers children; no manual centering needed
+        javafx.scene.layout.StackPane root = new javafx.scene.layout.StackPane();
+
+        // Everything we draw goes inside this content group (scaled as one)
+        Group content = new Group();
 
         Group boardGroup = new Group();
         boardGroup.setLayoutX(PADDING);
         boardGroup.setLayoutY(PADDING);
 
-        // Stacking order: base squares, last move/selection highlights, move dots, pieces, top overlays
+        // Layers
         boardGroup.getChildren().add(buildSquares());
         boardGroup.getChildren().add(highlightLayer);
         boardGroup.getChildren().add(pieceLayer);
         boardGroup.getChildren().add(overlayLayer);
+        highlightLayer.setMouseTransparent(true);
+        overlayLayer.setMouseTransparent(true);
 
-        root.getChildren().add(boardGroup);
-        root.getChildren().add(buildCoordinates());
 
-        Scene scene = new Scene(root);
+        content.getChildren().add(boardGroup);
+        content.getChildren().add(buildCoordinates());
+
+        root.getChildren().add(content);
+
+        
+
+        // Scene starts at base size; user can resize freely
+        Scene scene = new Scene(root, baseW, baseH);
         stage.setTitle("Predix Chess • JavaFX");
         stage.setScene(scene);
-        stage.setResizable(false);
+        stage.setResizable(true);
         stage.show();
+
+        // Scale content to fit window (preserve aspect ratio), StackPane centers it
+        javafx.beans.binding.DoubleBinding scale = javafx.beans.binding.Bindings.createDoubleBinding(
+            () -> {
+                double w = root.getWidth();
+                double h = root.getHeight();
+                if (w <= 0 || h <= 0) return 1.0; // before first layout pass
+                return Math.min(w / baseW, h / baseH);
+            },
+            root.widthProperty(), root.heightProperty()
+        );
+        content.scaleXProperty().bind(scale);
+        content.scaleYProperty().bind(scale);
 
         loadPieces();
         refreshPieces();
@@ -88,14 +114,28 @@ public class GUI extends Application {
 
     private Pane buildSquares() {
         Pane pane = new Pane();
+
+        // Theme-based board background
+        String bgPath = "/pieces/" + THEME + "/board.png";
+        InputStream bgStream = getClass().getResourceAsStream(bgPath);
+        ImageView bg = new ImageView(new Image(bgStream));
+        bg.setFitWidth(SIZE * TILE);
+        bg.setFitHeight(SIZE * TILE);
+        bg.setPreserveRatio(false); // Fill the board area exactly
+        bg.setSmooth(true);
+        bg.setMouseTransparent(true);
+        pane.getChildren().add(bg); // background at the very bottom
+
+        // Invisible tile rectangles for input handling (and for highlights to layer above)
         for (int y = 0; y < SIZE; y++) {
             for (int x = 0; x < SIZE; x++) {
-                final int fx = x;  // make final copies
+                final int fx = x;
                 final int fy = y;
 
                 Rectangle r = new Rectangle(x * TILE, y * TILE, TILE, TILE);
-                r.setFill(((x + y) % 2 == 0) ? lightColor : darkColor);
-                r.setOnMouseClicked(evt -> onSquareClick(fx, fy)); // use fx/fy here
+                r.setFill(javafx.scene.paint.Color.TRANSPARENT); // board.png provides visuals
+                r.setPickOnBounds(true);
+                r.setOnMouseClicked(evt -> onSquareClick(fx, fy));
                 squares[y][x] = r;
                 pane.getChildren().add(r);
             }
@@ -103,8 +143,18 @@ public class GUI extends Application {
         return pane;
     }
 
+    private void repaintBoard() {
+        // Keep tiles transparent so the themed board.png remains visible
+        for (int y = 0; y < SIZE; y++) {
+            for (int x = 0; x < SIZE; x++) {
+                squares[y][x].setFill(javafx.scene.paint.Color.TRANSPARENT);
+            }
+        }
+    }
+
     private Pane buildCoordinates() {
         Pane coords = new Pane();
+        coords.setMouseTransparent(true);
         coords.setPrefSize(PADDING + SIZE * TILE + PADDING, PADDING + SIZE * TILE + PADDING);
 
         // Files a-h (bottom)
@@ -210,13 +260,21 @@ public class GUI extends Application {
             case 'b' -> isWhite ? "wB" : "bB";
             case 'n' -> isWhite ? "wN" : "bN";
             case 'p' -> isWhite ? "wP" : "bP";
-            default -> "wP";
+            default -> isWhite ? "wP" : "bP";
         };
         String path = "/pieces/" + THEME + "/" + name + ".png";
-        java.io.InputStream is = getClass().getResourceAsStream(path);
+        InputStream is = getClass().getResourceAsStream(path);
         if (is == null) {
-            // Missing image resource; return a small transparent placeholder so the app can still run.
-            return new javafx.scene.image.WritableImage((int) (TILE * 0.9), (int) (TILE * 0.9));
+            System.err.println("Missing piece image: " + path + " (showing placeholder)");
+            // Return a visible placeholder (opaque) so it's obvious
+            javafx.scene.image.WritableImage img =
+                new javafx.scene.image.WritableImage((int)(TILE * 0.9), (int)(TILE * 0.9));
+            for (int y = 0; y < img.getHeight(); y++) {
+                for (int x = 0; x < img.getWidth(); x++) {
+                    img.getPixelWriter().setArgb(x, y, 0xFFCCCCCC); // light gray opaque
+                }
+            }
+            return img;
         }
         return new Image(is);
     }
@@ -225,50 +283,44 @@ public class GUI extends Application {
         clearHighlights();
 
         if (selected == null) {
-            Piece p = pieceAt(x, y);
+            Piece p = board.getPieceAt(x, y);
             if (p == null) return;
             selected = new int[] { x, y };
             highlightSelection(x, y);
-            legalTargets = computePseudoLegalTargets(p);
+            legalTargets = board.getPseudoLegalTargets(p);
             highlightTargets(legalTargets);
         } else {
-            // If clicked same color piece, reselect
-            Piece clicked = pieceAt(x, y);
-            Piece selPiece = pieceAt(selected[0], selected[1]);
-            if (clicked != null && selPiece != null &&
-                sameColor(clicked, selPiece)) {
+            Piece clicked = board.getPieceAt(x, y);
+            Piece selPiece = board.getPieceAt(selected[0], selected[1]);
+            if (clicked != null && selPiece != null && sameColor(clicked, selPiece)) {
                 selected = new int[] { x, y };
                 highlightSelection(x, y);
-                legalTargets = computePseudoLegalTargets(clicked);
+                legalTargets = board.getPseudoLegalTargets(clicked);
                 highlightTargets(legalTargets);
                 return;
             }
 
-            String fromAlg = toAlg(selected[0], selected[1]);
-            String toAlg = toAlg(x, y);
+            String fromAlg = board.toAlg(selected[0], selected[1]);
+            String toAlg = board.toAlg(x, y);
 
             if (!legalTargets.contains(toAlg)) {
-                // Deselect if clicking outside legal targets
                 selected = null;
                 return;
             }
 
-            // Handle capture visually: remove target piece from model list before move
-            Piece captured = pieceAt(x, y);
+            Piece captured = board.getPieceAt(x, y);
             ImageView capturedNode = null;
             if (captured != null) {
                 capturedNode = pieceNodes.get(captured);
-                board.getPieces().remove(captured); // ensure Board doesn't re-add it in refresh
+                board.getPieces().remove(captured);
             }
 
-            // Perform engine move (no legality enforcement inside engine)
             try {
                 lastFrom = new int[]{selected[0], selected[1]};
                 lastTo = new int[]{x, y};
                 animateMove(selPiece, x, y, capturedNode);
                 board.move(fromAlg, toAlg);
             } catch (Exception ex) {
-                // rollback on error: re-insert captured to model (if any)
                 if (captured != null && !board.getPieces().contains(captured)) {
                     board.getPieces().add(captured);
                 }
@@ -339,14 +391,6 @@ public class GUI extends Application {
         }
     }
 
-    private void repaintBoard() {
-        for (int y = 0; y < SIZE; y++) {
-            for (int x = 0; x < SIZE; x++) {
-                squares[y][x].setFill(((x + y) % 2 == 0) ? lightColor : darkColor);
-            }
-        }
-    }
-
     private void highlightSelection(int x, int y) {
         shadeSquare(x, y, selectColor);
     }
@@ -365,7 +409,7 @@ public class GUI extends Application {
 
     private void highlightTargets(Set<String> targets) {
         for (String alg : targets) {
-            int[] xy = fromAlg(alg);
+            int[] xy = board.fromAlg(alg);
             double cx = xy[0] * TILE + TILE / 2.0;
             double cy = xy[1] * TILE + TILE / 2.0;
             Circle dot = new Circle(cx, cy, TILE * 0.16);
@@ -374,112 +418,9 @@ public class GUI extends Application {
         }
     }
 
-    private Piece pieceAt(int x, int y) {
-        for (Piece p : board.getPieces()) {
-            if (p.getX() == x && p.getY() == y) return p;
-        }
-        return null;
-    }
-
     private boolean sameColor(Piece a, Piece b) {
         return a.getColor() != null && b.getColor() != null && a.getColor().getCode() == b.getColor().getCode();
     }
-
-    private String toAlg(int x, int y) {
-        char file = (char) ('a' + x);
-        int rank = SIZE - y;
-        return "" + file + rank;
-    }
-
-    private int[] fromAlg(String alg) {
-        int x = alg.charAt(0) - 'a';
-        int rank = alg.charAt(1) - '0'; // 1..8
-        int y = SIZE - rank;
-        return new int[]{x, y};
-    }
-
-    // Pseudo-legal move generation on the GUI side
-    private Set<String> computePseudoLegalTargets(Piece p) {
-        Set<String> targets = new LinkedHashSet<>();
-        boolean isWhite = p.getColor() != null && p.getColor().getCode() == 1;
-        char t = Character.toLowerCase(p.symbol().charAt(0));
-        int x = p.getX(), y = p.getY();
-
-        switch (t) {
-            case 'n' -> {
-                int[][] offs = {{1,2},{2,1},{2,-1},{1,-2},{-1,-2},{-2,-1},{-2,1},{-1,2}};
-                for (int[] o : offs) addIfValidTarget(x + o[0], y + o[1], isWhite, targets);
-            }
-            case 'k' -> {
-                for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) {
-                    if (dx == 0 && dy == 0) continue;
-                    addIfValidTarget(x + dx, y + dy, isWhite, targets);
-                }
-                // Castling omitted here for brevity
-            }
-            case 'b' -> slideTargets(x, y, isWhite, targets, new int[][]{{1,1},{1,-1},{-1,1},{-1,-1}});
-            case 'r' -> slideTargets(x, y, isWhite, targets, new int[][]{{1,0},{-1,0},{0,1},{0,-1}});
-            case 'q' -> slideTargets(x, y, isWhite, targets, new int[][]{{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}});
-            case 'p' -> {
-                int dir = isWhite ? -1 : 1;
-                // Single push
-                if (empty(x, y + dir)) targets.add(toAlg(x, y + dir));
-                // Double push from start rank
-                int startRank = isWhite ? 6 : 1;
-                if (y == startRank && empty(x, y + dir) && empty(x, y + 2*dir)) {
-                    targets.add(toAlg(x, y + 2*dir));
-                }
-                // Captures
-                addIfCapture(x + 1, y + dir, isWhite, targets);
-                addIfCapture(x - 1, y + dir, isWhite, targets);
-                // En passant omitted for brevity
-            }
-        }
-        return targets;
-    }
-
-    private void slideTargets(int x, int y, boolean isWhite, Set<String> out, int[][] dirs) {
-        for (int[] d : dirs) {
-            int nx = x + d[0], ny = y + d[1];
-            while (inBounds(nx, ny)) {
-                Piece at = pieceAt(nx, ny);
-                if (at == null) {
-                    out.add(toAlg(nx, ny));
-                } else {
-                    if (at.getColor() != null && (at.getColor().getCode() != (isWhite ? 1 : 0))) {
-                        // Your Color codes: 1 for white, else black
-                        out.add(toAlg(nx, ny));
-                    } else if (at.getColor() == null) {
-                        out.add(toAlg(nx, ny));
-                    }
-                    break;
-                }
-                nx += d[0];
-                ny += d[1];
-            }
-        }
-    }
-
-    private boolean empty(int x, int y) {
-        return inBounds(x, y) && pieceAt(x, y) == null;
-    }
-
-    private void addIfValidTarget(int x, int y, boolean isWhite, Set<String> out) {
-        if (!inBounds(x, y)) return;
-        Piece at = pieceAt(x, y);
-        if (at == null) out.add(toAlg(x, y));
-        else if (at.getColor() != null && at.getColor().getCode() != (isWhite ? 1 : 0)) out.add(toAlg(x, y));
-    }
-
-    private void addIfCapture(int x, int y, boolean isWhite, Set<String> out) {
-        if (!inBounds(x, y)) return;
-        Piece at = pieceAt(x, y);
-        if (at != null && at.getColor() != null && at.getColor().getCode() != (isWhite ? 1 : 0)) {
-            out.add(toAlg(x, y));
-        }
-    }
-
-    private boolean inBounds(int x, int y) { return x >= 0 && x < SIZE && y >= 0 && y < SIZE; }
 
     public static void main(String[] args) { launch(args); }
 }

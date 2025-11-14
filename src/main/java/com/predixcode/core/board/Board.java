@@ -2,7 +2,9 @@ package com.predixcode.core.board;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.predixcode.core.board.pieces.King;
 import com.predixcode.core.board.pieces.Piece;
@@ -35,6 +37,23 @@ public class Board {
 
     public List<Piece> getPieces() { return pieces; }
 
+    public Piece getPieceAt(int x, int y) {
+        for (Piece p : pieces) {
+            if (p.getX() == x && p.getY() == y) return p;
+        }
+        return null;
+    }
+
+    public void nextTurn() {
+        halfmove++; // Simplified; in real chess, reset on pawn move or capture
+        if (activeColor == Color.BLACK) {
+            fullmove++;
+        }
+        if (activeColor != null) {
+            activeColor = activeColor.opposite();
+        }
+    }
+
     public void move(String from, String to) {
         int[] fromXY = FenAdapter.parseAlgebraicSquare(from);
         int[] toXY = FenAdapter.parseAlgebraicSquare(to);
@@ -54,14 +73,105 @@ public class Board {
         nextTurn();
     }
 
-    public void nextTurn() {
-        halfmove++; // Simplified; in real chess, reset on pawn move or capture
-        if (activeColor == Color.BLACK) {
-            fullmove++;
+    // Public API: pseudo-legal targets for a piece (algebraic like "e4")
+    public Set<String> getPseudoLegalTargets(Piece p) {
+        Set<String> targets = new LinkedHashSet<>();
+        if (p == null) return targets;
+
+        boolean isWhite = p.getColor() != null && p.getColor().getCode() == 1;
+        char t = Character.toLowerCase(p.symbol().charAt(0));
+        int x = p.getX(), y = p.getY();
+
+        switch (t) {
+            case 'n' -> {
+                int[][] offs = {{1,2},{2,1},{2,-1},{1,-2},{-1,-2},{-2,-1},{-2,1},{-1,2}};
+                for (int[] o : offs) addIfValidTarget(x + o[0], y + o[1], isWhite, targets);
+            }
+            case 'k' -> {
+                for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) {
+                    if (dx == 0 && dy == 0) continue;
+                    addIfValidTarget(x + dx, y + dy, isWhite, targets);
+                }
+                // Castling omitted for brevity (add here if needed)
+            }
+            case 'b' -> slideTargets(x, y, isWhite, targets, new int[][]{{1,1},{1,-1},{-1,1},{-1,-1}});
+            case 'r' -> slideTargets(x, y, isWhite, targets, new int[][]{{1,0},{-1,0},{0,1},{0,-1}});
+            case 'q' -> slideTargets(x, y, isWhite, targets, new int[][]{{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}});
+            case 'p' -> {
+                int dir = isWhite ? -1 : 1;
+                // Single push
+                if (empty(x, y + dir)) targets.add(toAlg(x, y + dir));
+                // Double push from start rank
+                int startRank = isWhite ? 6 : 1; // using 0-top, 7-bottom indexing
+                if (y == startRank && empty(x, y + dir) && empty(x, y + 2*dir)) {
+                    targets.add(toAlg(x, y + 2*dir));
+                }
+                // Captures
+                addIfCapture(x + 1, y + dir, isWhite, targets);
+                addIfCapture(x - 1, y + dir, isWhite, targets);
+                // En passant omitted
+            }
         }
-        if (activeColor != null) {
-            activeColor = activeColor.opposite();
+        return targets;
+    }
+
+    // Helpers (Board-internal)
+    private void slideTargets(int x, int y, boolean isWhite, Set<String> out, int[][] dirs) {
+        for (int[] d : dirs) {
+            int nx = x + d[0], ny = y + d[1];
+            while (inBounds(nx, ny)) {
+                Piece at = getPieceAt(nx, ny);
+                if (at == null) {
+                    out.add(toAlg(nx, ny));
+                } else {
+                    if (at.getColor() != null && (at.getColor().getCode() != (isWhite ? 1 : 0))) {
+                        out.add(toAlg(nx, ny)); // capture
+                    } else if (at.getColor() == null) {
+                        out.add(toAlg(nx, ny));
+                    }
+                    break; // stop ray on first piece
+                }
+                nx += d[0];
+                ny += d[1];
+            }
         }
+    }
+
+    private boolean inBounds(int x, int y) {
+        return x >= 0 && x < xMatrix && y >= 0 && y < yMatrix;
+    }
+
+    private boolean empty(int x, int y) {
+        return inBounds(x, y) && getPieceAt(x, y) == null;
+    }
+
+    private void addIfValidTarget(int x, int y, boolean isWhite, Set<String> out) {
+        if (!inBounds(x, y)) return;
+        Piece at = getPieceAt(x, y);
+        if (at == null) out.add(toAlg(x, y));
+        else if (at.getColor() != null && at.getColor().getCode() != (isWhite ? 1 : 0)) out.add(toAlg(x, y));
+    }
+
+    private void addIfCapture(int x, int y, boolean isWhite, Set<String> out) {
+        if (!inBounds(x, y)) return;
+        Piece at = getPieceAt(x, y);
+        if (at != null && at.getColor() != null && at.getColor().getCode() != (isWhite ? 1 : 0)) {
+            out.add(toAlg(x, y));
+        }
+    }
+
+    // Algebraic from board coords
+    public String toAlg(int x, int y) {
+        char file = (char) ('a' + x);
+        int rank = yMatrix - y;
+        return "" + file + rank;
+    }
+
+    public int[] fromAlg(String alg) {
+        int x = alg.charAt(0) - 'a';
+        int rank = alg.charAt(1) - '0'; // 1..8
+        int y = yMatrix - rank;
+        return new int[]{x, y};
     }
 
     @Override
@@ -93,7 +203,7 @@ public class Board {
 
         sb.append("Active: ").append(activeColor != null ? activeColor : "unknown").append('\n');
         sb.append("Castling: ").append(currentCastlingString()).append('\n');
-        sb.append("En Passant: ").append(toAlgebraicSquare(enPassant)).append('\n');
+        sb.append("En Passant: ").append(toAlg(enPassant[0], enPassant[1])).append('\n');
         sb.append("Halfmove: ").append(halfmove).append('\n');
         sb.append("Fullmove: ").append(fullmove).append('\n');
 
@@ -116,13 +226,5 @@ public class Board {
         }
         String s = (K ? "K" : "") + (Q ? "Q" : "") + (k ? "k" : "") + (q ? "q" : "");
         return s.isEmpty() ? "-" : s;
-    }
-
-    private String toAlgebraicSquare(int[] xy) {
-        if (xy == null || xy.length != 2 || xy[0] < 0 || xy[1] < 0) return "-";
-        int x = xy[0], y = xy[1];
-        char file = (char) ('a' + x);
-        char rank = (char) ('0' + (yMatrix - y));
-        return "" + file + rank;
     }
 }
