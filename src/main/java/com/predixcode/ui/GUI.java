@@ -361,7 +361,7 @@ public abstract class Gui extends Application {
         }
 
         try {
-            board.move(fromAlg, toAlg);
+            board.applyTurn(fromAlg, toAlg);
             lastFrom = new int[]{fromX, fromY};
             lastTo = new int[]{x, y};
 

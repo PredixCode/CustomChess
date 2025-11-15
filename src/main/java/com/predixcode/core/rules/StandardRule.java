@@ -13,56 +13,25 @@ public class StandardRule implements Rule {
 
     @Override
     public void apply(Board board, Piece movingPiece, String from, String to) {
+        throwIfIllegal(board, movingPiece, to, from);
+
+        // Prepare move
         int[] fromXY = board.fromAlg(from);
         int[] toXY   = board.fromAlg(to);
-
-        // 1) Turn and target validation
-        turnCheck(board, movingPiece, to, from);
-
-        // 2) Initial state/flags
-        boolean isPawn = movingPiece instanceof Pawn;
-        boolean isKing = movingPiece instanceof King;
         boolean isCapture = isSquareOccupied(board, toXY);
 
-        // 3) Special move: En passant (if applicable)
-        //    - If performed, it sets isCapture=true via removal of the captured pawn.
-        if (isPawn) {
-            boolean enPassantDone = performEnPassantIfApplicable(board, movingPiece, fromXY, toXY);
-            if (enPassantDone) {
-                isCapture = true;
-            }
-        }
+        // Handle special moves
+        isCapture = enPassante(isCapture, board, movingPiece, fromXY, toXY);
+        castling(board, movingPiece, fromXY, toXY, isCapture);
 
-        // 4) Special move: Castling (if applicable)
-        //    - Handles rook move and clears en passant. Skip normal capture & EP-target changes if castling.
-        if (isKing && isCastlingMove(fromXY, toXY)) {
-            handleCastling(board, (King) movingPiece, fromXY, toXY);
-        } else {
-            // 5) Normal capture (if any)
-            handleStandardCaptureIfAny(board, toXY);
+        // Handle standard move and capture
+        handleCaptureIfAny(board, toXY);
 
-            // 6) Update en passant target (only relevant for a 2-square pawn push)
-            updateEnPassantTargetIfApplicable(board, movingPiece, fromXY, toXY);
-        }
-
-        // 7) Make the move
         movePieceToDestination(movingPiece, toXY);
-
-        // 8) Halfmove clock update
-        updateHalfmoveClock(board, movingPiece, isCapture);
-
-        // 9) Castling rights update
-        board.updateCastlingRightsAfterMove(movingPiece, fromXY[0], fromXY[1], toXY[0], toXY[1], isCapture);
-
-        // 10) Next turn
-        board.nextTurn();
+        nextTurn(board, movingPiece, isCapture);
     }
 
-    // --------------------
-    // Validation
-    // --------------------
-
-    protected void turnCheck(Board board, Piece movingPiece, String to, String from) {
+    public void throwIfIllegal(Board board, Piece movingPiece, String to, String from) {
         if (board.activeColor != null && !movingPiece.getColor().equals(board.activeColor)) {
             throw new IllegalStateException("It is not " + movingPiece.getColor() + "'s turn");
         }
@@ -70,19 +39,44 @@ public class StandardRule implements Rule {
         Set<String> targets = movingPiece.getLegalMoves(board);
         String toAlg = to.toLowerCase();
         if (!targets.contains(toAlg)) {
-            throw new IllegalArgumentException("Destination " + to + " is not a pseudo-legal target for " + from);
+            throw new IllegalArgumentException("Destination " + to + " is not a legal target for " + from);
         }
     }
 
-    // --------------------
-    // Special Moves
-    // --------------------
+    public boolean enPassante(boolean isCapture, Board board, Piece movingPiece, int[] fromXY, int[] toXY) {
+        boolean enPassanteDone = performEnPassantIfApplicable(board, movingPiece, fromXY, toXY);
+        if (enPassanteDone) {
+            isCapture = true;
+        }
+        // Update en passant target (only relevant for a 2-square pawn push)
+        updateEnPassantTargetIfApplicable(board, movingPiece, fromXY, toXY);
+        return isCapture;
+    }
+
+    public void castling(Board board, Piece movingPiece, int[] fromXY, int[] toXY, boolean isCapture) {
+        boolean isKing = movingPiece instanceof King;
+        if (isKing && isCastlingMove(fromXY, toXY)) {
+            handleCastling(board, (King) movingPiece, fromXY, toXY);
+            board.updateCastlingRightsAfterMove(movingPiece, fromXY[0], fromXY[1], toXY[0], toXY[1], isCapture);
+        } 
+    }
+
+    public void nextTurn(Board board, Piece movingPiece, boolean isCapture) {
+        updateHalfmove(board, movingPiece, isCapture);
+        updateFullMove(board);
+        switchPlayer(board);
+    }
+
+
 
     /**
      * Performs en passant if the move is a diagonal pawn move into an empty square.
      * Returns true if an en passant capture was performed.
      */
     private boolean performEnPassantIfApplicable(Board board, Piece movingPiece, int[] fromXY, int[] toXY) {
+        boolean isPawn = movingPiece instanceof Pawn;
+        if (!isPawn) return false;
+        
         // Diagonal move into an empty square => potential en passant
         if (fromXY[0] != toXY[0] && board.isEmpty(toXY[0], toXY[1])) {
             int dir = forwardDir(movingPiece.getColor());
@@ -130,20 +124,22 @@ public class StandardRule implements Rule {
         board.clearEnPassant();
     }
 
-    // --------------------
-    // Standard Moves
-    // --------------------
-
-    private void handleStandardCaptureIfAny(Board board, int[] toXY) {
+    /**
+     * Handles standard capture if there is a piece at the destination square.
+     */
+    protected void handleCaptureIfAny(Board board, int[] toXY) {
         Piece captured = board.getPieceAt(toXY[0], toXY[1]);
         if (captured != null) {
             board.pieces.remove(captured);
         }
     }
 
+    protected void movePieceToDestination(Piece movingPiece, int[] toXY) {
+        movingPiece.setPosition(toXY[0], toXY[1]);
+    }
+
     /**
-     * Clears EP by default. If the move is a two-square pawn push,
-     * sets the en passant target square to the intermediate square.
+     * Updates the en passant target square if the moving piece is a pawn
      */
     private void updateEnPassantTargetIfApplicable(Board board, Piece movingPiece, int[] fromXY, int[] toXY) {
         board.clearEnPassant();
@@ -155,15 +151,9 @@ public class StandardRule implements Rule {
         }
     }
 
-    private void movePieceToDestination(Piece movingPiece, int[] toXY) {
-        movingPiece.setPosition(toXY[0], toXY[1]);
-    }
 
-    // --------------------
-    // Clocks & Rights
-    // --------------------
 
-    private void updateHalfmoveClock(Board board, Piece movingPiece, boolean isCapture) {
+    private void updateHalfmove(Board board, Piece movingPiece, boolean isCapture) {
         if (movingPiece instanceof Pawn || isCapture) {
             board.halfmove = 0;
         } else {
@@ -171,15 +161,24 @@ public class StandardRule implements Rule {
         }
     }
 
-    // --------------------
-    // Utilities
-    // --------------------
+    private void updateFullMove(Board board) {
+        if (board.activeColor == Color.BLACK) {
+            board.fullmove++;
+        }
+    }
 
+    private void switchPlayer(Board board) {
+        if (board.activeColor != null) {
+            board.activeColor = board.activeColor.opposite();
+        }
+    }
+
+    // Utilities
     private boolean isCastlingMove(int[] fromXY, int[] toXY) {
         return Math.abs(toXY[0] - fromXY[0]) == 2;
     }
 
-    private boolean isSquareOccupied(Board board, int[] xy) {
+    protected boolean isSquareOccupied(Board board, int[] xy) {
         return board.getPieceAt(xy[0], xy[1]) != null;
     }
 

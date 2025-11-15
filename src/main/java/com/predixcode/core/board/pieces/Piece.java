@@ -30,6 +30,10 @@ public abstract class Piece {
     public void setColor(Color color) { this.color = color; }
     public Color getColor() { return this.color; }
 
+    public void switchColor() {
+        this.color = this.color.opposite();
+    }
+
     public String getSymbol() {
         return color == null ? fenSymbol : color.formatSymbol(fenSymbol);
     }

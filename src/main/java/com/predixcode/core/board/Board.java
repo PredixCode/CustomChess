@@ -41,14 +41,16 @@ public class Board {
     }
 
     // ========== Piece access and board state ==========
-    public void move(String from, String to) { 
+    public void applyTurn(String from, String to) { 
+        // Check if move is invalid, then throw
         int[] fromXY = fromAlg(from);
         int[] toXY = fromAlg(to);
-        if (fromXY == null || toXY == null) throw new IllegalArgumentException("Invalid move coordinates");
+        if (fromXY == null || toXY == null) throw new IllegalArgumentException("Invalid (null) move coordinates");
 
         Piece movingPiece = getPieceAt(fromXY[0], fromXY[1]);
         if (movingPiece == null) throw new IllegalArgumentException("No piece at source square: " + from);
 
+        // Apply game rules
         for (Rule rule : rules) {
             rule.apply(this, movingPiece, from, to);
         }
@@ -67,15 +69,6 @@ public class Board {
 
     public boolean isEmpty(int x, int y) {
         return inBounds(x, y) && getPieceAt(x, y) == null;
-    }
-
-    public void nextTurn() {
-        if (activeColor == Color.BLACK) {
-            fullmove++;
-        }
-        if (activeColor != null) {
-            activeColor = activeColor.opposite();
-        }
     }
 
     public String toAlg(int x, int y) {
