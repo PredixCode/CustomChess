@@ -1,0 +1,4 @@
+- missing logic for check: winning/loosing/remis conditions
+- missing reset button
+- build to apk
+- local server: play with friends via same network

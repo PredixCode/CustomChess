@@ -4,6 +4,7 @@ public class White extends Color {
     
     public White() {
         this.colorName = "white";
+        this.colorSymbol = "w";
         this.colorCode = 1;
     }
 

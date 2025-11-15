@@ -4,6 +4,7 @@ public class Black extends Color {
 
     public Black() {
         this.colorName = "black";
+        this.colorSymbol = "b";
         this.colorCode = 0;
     }
 

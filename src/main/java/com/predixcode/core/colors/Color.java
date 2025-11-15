@@ -2,12 +2,15 @@ package com.predixcode.core.colors;
 
 public abstract class Color {
     protected String colorName;
+    protected String colorSymbol;
     protected int colorCode;
+    
 
     public static final Color WHITE = new White();
     public static final Color BLACK = new Black();
 
     public String getName() { return colorName; }
+    public String getSymbol() { return colorSymbol; }
     public int getCode() { return colorCode; }
 
     public abstract String formatSymbol(String s);

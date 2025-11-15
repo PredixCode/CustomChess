@@ -22,6 +22,7 @@ import javafx.scene.Scene;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
@@ -263,33 +264,26 @@ public class GUI extends Application {
     }
 
     private Image loadImageFor(Piece p) {
-        boolean isWhite = p.getColor() != null && p.getColor().getCode() == 1;
-        char t = Character.toLowerCase(p.symbol().charAt(0));
-        String name = switch (t) {
-            case 'k' -> isWhite ? "wK" : "bK";
-            case 'q' -> isWhite ? "wQ" : "bQ";
-            case 'r' -> isWhite ? "wR" : "bR";
-            case 'b' -> isWhite ? "wB" : "bB";
-            case 'n' -> isWhite ? "wN" : "bN";
-            case 'p' -> isWhite ? "wP" : "bP";
-            default -> isWhite ? "wP" : "bP";
-        };
+        String name = p.getColor().getSymbol() + p.symbol().toUpperCase();
         String path = "/pieces/" + THEME + "/" + name + ".png";
-        InputStream is = getClass().getResourceAsStream(path);
-        if (is == null) {
-            System.err.println("Missing piece image: " + path + " (showing placeholder)");
-            // Return a visible placeholder (opaque) so it's obvious
-            javafx.scene.image.WritableImage img =
-                new javafx.scene.image.WritableImage((int)(TILE * 0.9), (int)(TILE * 0.9));
-            for (int y = 0; y < img.getHeight(); y++) {
-                for (int x = 0; x < img.getWidth(); x++) {
-                    img.getPixelWriter().setArgb(x, y, 0xFFCCCCCC); // light gray opaque
-                }
-            }
-            return img;
+        InputStream resource = getClass().getResourceAsStream(path);
+        if (resource == null) {
+            System.err.println("Missing piece image: " + path);
+            return missingPiecePlaceholder();
         }
-        return new Image(is);
+        return new Image(resource);
     }
+
+    private Image missingPiecePlaceholder() {
+        WritableImage img;
+        img = new WritableImage((int)(TILE * 0.9), (int)(TILE * 0.9));
+        for (int y = 0; y < img.getHeight(); y++) {
+            for (int x = 0; x < img.getWidth(); x++) {
+                img.getPixelWriter().setArgb(x, y, 0xFFCCCCCC); // light gray opaque
+            }
+        }
+        return img;
+    } 
 
     private void onSquareClick(int x, int y) {
         clearHighlights();
@@ -374,51 +368,51 @@ public class GUI extends Application {
     }
 
     private void animateMove(Piece p, int fromX, int fromY, int toX, int toY, ImageView capturedNode) {
-    ImageView iv = pieceNodes.get(p);
-    if (iv == null) return;
+        ImageView iv = pieceNodes.get(p);
+        if (iv == null) return;
 
-    double fromLayoutX = snapX(fromX);
-    double fromLayoutY = snapY(fromY);
-    double toLayoutX = snapX(toX);
-    double toLayoutY = snapY(toY);
+        double fromLayoutX = snapX(fromX);
+        double fromLayoutY = snapY(fromY);
+        double toLayoutX = snapX(toX);
+        double toLayoutY = snapY(toY);
 
-    Timeline tl = new Timeline();
-    int time = 200;
+        Timeline tl = new Timeline();
+        int time = 200;
 
-    // Fade captured AFTER a successful move (we call this only post-move)
-    if (capturedNode != null) {
-        FadeTransition fade = new FadeTransition(Duration.millis(120), capturedNode);
-        fade.setFromValue(1.0);
-        fade.setToValue(0.0);
-        fade.setOnFinished(e -> pieceLayer.getChildren().remove(capturedNode));
-        fade.play();
+        // Fade captured AFTER a successful move (we call this only post-move)
+        if (capturedNode != null) {
+            FadeTransition fade = new FadeTransition(Duration.millis(120), capturedNode);
+            fade.setFromValue(1.0);
+            fade.setToValue(0.0);
+            fade.setOnFinished(e -> pieceLayer.getChildren().remove(capturedNode));
+            fade.play();
+        }
+
+        iv.toFront();
+        tl.getKeyFrames().addAll(
+            new KeyFrame(Duration.ZERO,
+                new KeyValue(iv.layoutXProperty(), fromLayoutX),
+                new KeyValue(iv.layoutYProperty(), fromLayoutY)
+            ),
+            new KeyFrame(Duration.millis(time),
+                new KeyValue(iv.layoutXProperty(), toLayoutX),
+                new KeyValue(iv.layoutYProperty(), toLayoutY)
+            )
+        );
+        tl.setOnFinished(e -> {
+            placeNodeAt(iv, toX, toY);
+            refreshPieces(); // sync other state (e.g., rook after castling, EP removal)
+        });
+        tl.play();
     }
 
-    iv.toFront();
-    tl.getKeyFrames().addAll(
-        new KeyFrame(Duration.ZERO,
-            new KeyValue(iv.layoutXProperty(), fromLayoutX),
-            new KeyValue(iv.layoutYProperty(), fromLayoutY)
-        ),
-        new KeyFrame(Duration.millis(time),
-            new KeyValue(iv.layoutXProperty(), toLayoutX),
-            new KeyValue(iv.layoutYProperty(), toLayoutY)
-        )
-    );
-    tl.setOnFinished(e -> {
-        placeNodeAt(iv, toX, toY);
-        refreshPieces(); // sync other state (e.g., rook after castling, EP removal)
-    });
-    tl.play();
-}
+    private double snapX(int x) { return x * TILE + (TILE - TILE * 0.9) / 2.0; }
+    private double snapY(int y) { return y * TILE + (TILE - TILE * 0.9) / 2.0; }
 
     private void placeNodeAt(ImageView iv, int x, int y) {
         iv.setLayoutX(snapX(x));
         iv.setLayoutY(snapY(y));
     }
-
-    private double snapX(int x) { return x * TILE + (TILE - TILE * 0.9) / 2.0; }
-    private double snapY(int y) { return y * TILE + (TILE - TILE * 0.9) / 2.0; }
 
     private void clearHighlights() {
         highlightLayer.getChildren().clear();
