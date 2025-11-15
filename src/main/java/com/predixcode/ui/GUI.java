@@ -39,7 +39,8 @@ public abstract class Gui extends Application {
     private static final int SIZE = 8;
     private static final double TILE = 88; // tile size in px
     private static final double PADDING = 24; // space for coordinates
-    private static final String THEME = "neo"; // folder under /pieces/
+    private static final String THEME = "neo/upscale"; // folder under /pieces/
+
 
     protected Board board;
     private final Rectangle[][] squares = new Rectangle[SIZE][SIZE];
