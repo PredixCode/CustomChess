@@ -24,7 +24,7 @@ public class Board {
     public List<Piece> pieces = new ArrayList<>();
     public List<Rule> rules = new ArrayList<>();
 
-    //  ========= Board initialization ==========
+    // Board initialization
     public static Board fromFen(String fen) {
         return FenAdapter.boardFromFen(fen);
     }
@@ -54,7 +54,7 @@ public class Board {
 
     public Piece getPieceAt(int x, int y) {
         for (Piece p : pieces) {
-            if (p.getX() == x && p.getY() == y) return p;
+            if (p.x == x && p.y == y) return p;
         }
         return null;
     }
@@ -163,7 +163,7 @@ public class Board {
         }
     }
 
-    private King getKing(Color color) {
+    public King getKing(Color color) {
         for (Piece p : pieces) {
             if (p instanceof King && p.getColor() == color) return (King)p;
         }
@@ -177,8 +177,8 @@ public class Board {
         for (int r = 0; r < height; r++) Arrays.fill(grid[r], '.');
 
         for (Piece p : pieces) {
-            int x = p.getX();
-            int y = p.getY();
+            int x = p.x;
+            int y = p.y;
             if (x >= 0 && x < width && y >= 0 && y < height) {
                 grid[y][x] = p.getSymbol().charAt(0);
             }

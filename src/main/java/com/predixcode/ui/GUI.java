@@ -222,13 +222,13 @@ public abstract class Gui extends Application {
             ds.setColor(javafx.scene.paint.Color.web("#00000040")); // JavaFX Color
             iv.setEffect(ds);
 
-            int x = p.getX();
-            int y = p.getY();
+            int x = p.x;
+            int y = p.y;
             placeNodeAt(iv, x, y);
 
             iv.setOnMouseClicked(e -> {
                 if (e.getButton() == MouseButton.PRIMARY) {
-                    onSquareClick(p.getX(), p.getY());
+                    onSquareClick(p.x, p.y);
                 }
             });
             pieceNodes.put(p, iv);
@@ -263,17 +263,17 @@ public abstract class Gui extends Application {
                 ds.setColor(Color.web("#00000040"));
                 iv.setEffect(ds);
                 iv.setOnMouseClicked(e -> {
-                    if (e.getButton() == MouseButton.PRIMARY) onSquareClick(p.getX(), p.getY());
+                    if (e.getButton() == MouseButton.PRIMARY) onSquareClick(p.x, p.y);
                 });
                 pieceNodes.put(p, iv);
                 pieceLayer.getChildren().add(iv);
-                placeNodeAt(iv, p.getX(), p.getY());
+                placeNodeAt(iv, p.x, p.y);
             }
         }
         // Sync positions (identity-based)
         for (Piece p : board.pieces) {
             ImageView iv = pieceNodes.get(p);
-            if (iv != null) placeNodeAt(iv, p.getX(), p.getY());
+            if (iv != null) placeNodeAt(iv, p.x, p.y);
         }
     }
 

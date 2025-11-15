@@ -24,8 +24,7 @@ public abstract class Piece {
     public void actionOnCapture(Board board) {}
 
     public void setPosition(int x, int y) { this.x = x; this.y = y; }
-    public int getX() { return x; }
-    public int getY() { return y; }
+    public int[] getXY () { return new int[] { this.x, this.y }; }
 
     public void setColor(Color color) { this.color = color; }
     public Color getColor() { return this.color; }
