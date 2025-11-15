@@ -12,7 +12,10 @@ import com.predixcode.core.colors.Color;
 public class StandardRule implements Rule {
 
     @Override
-    public void apply(Board board, Piece movingPiece, String from, String to) {
+    public void applyOnStart(Board board) {}
+
+    @Override
+    public void applyOnTurn(Board board, Piece movingPiece, String from, String to) {
         throwIfIllegal(board, movingPiece, to, from);
 
         // Prepare move
@@ -73,7 +76,7 @@ public class StandardRule implements Rule {
      * Performs en passant if the move is a diagonal pawn move into an empty square.
      * Returns true if an en passant capture was performed.
      */
-    private boolean performEnPassantIfApplicable(Board board, Piece movingPiece, int[] fromXY, int[] toXY) {
+    protected boolean performEnPassantIfApplicable(Board board, Piece movingPiece, int[] fromXY, int[] toXY) {
         boolean isPawn = movingPiece instanceof Pawn;
         if (!isPawn) return false;
         
@@ -94,7 +97,7 @@ public class StandardRule implements Rule {
      * Handles castling (king moves two squares horizontally), moves the rook,
      * disables king castling rights and clears en passant target.
      */
-    private void handleCastling(Board board, King king, int[] fromXY, int[] toXY) {
+    protected void handleCastling(Board board, King king, int[] fromXY, int[] toXY) {
         int rankY = fromXY[1];
         if (toXY[0] > fromXY[0]) {
             // King-side castle: move rook from nearest right rook to f-file (x = fromX + 1)
@@ -141,7 +144,7 @@ public class StandardRule implements Rule {
     /**
      * Updates the en passant target square if the moving piece is a pawn
      */
-    private void updateEnPassantTargetIfApplicable(Board board, Piece movingPiece, int[] fromXY, int[] toXY) {
+    protected void updateEnPassantTargetIfApplicable(Board board, Piece movingPiece, int[] fromXY, int[] toXY) {
         board.clearEnPassant();
         if (movingPiece instanceof Pawn && Math.abs(toXY[1] - fromXY[1]) == 2) {
             int dir = forwardDir(movingPiece.getColor());
@@ -153,7 +156,7 @@ public class StandardRule implements Rule {
 
 
 
-    private void updateHalfmove(Board board, Piece movingPiece, boolean isCapture) {
+    protected void updateHalfmove(Board board, Piece movingPiece, boolean isCapture) {
         if (movingPiece instanceof Pawn || isCapture) {
             board.halfmove = 0;
         } else {
@@ -161,20 +164,20 @@ public class StandardRule implements Rule {
         }
     }
 
-    private void updateFullMove(Board board) {
+    protected void updateFullMove(Board board) {
         if (board.activeColor == Color.BLACK) {
             board.fullmove++;
         }
     }
 
-    private void switchPlayer(Board board) {
+    protected void switchPlayer(Board board) {
         if (board.activeColor != null) {
             board.activeColor = board.activeColor.opposite();
         }
     }
 
     // Utilities
-    private boolean isCastlingMove(int[] fromXY, int[] toXY) {
+    protected boolean isCastlingMove(int[] fromXY, int[] toXY) {
         return Math.abs(toXY[0] - fromXY[0]) == 2;
     }
 
@@ -186,7 +189,7 @@ public class StandardRule implements Rule {
      * Returns movement direction for the given color:
      * WHITE moves "up" (-1), BLACK moves "down" (+1).
      */
-    private int forwardDir(Color color) {
+    protected int forwardDir(Color color) {
         return (color == Color.WHITE) ? -1 : 1;
     }
 }

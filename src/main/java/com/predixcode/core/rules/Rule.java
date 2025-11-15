@@ -6,6 +6,7 @@ import com.predixcode.core.board.pieces.Piece;
 
 public interface Rule {
 
-    void apply(Board board, Piece movingPiece, String from, String to);
-    
+    void applyOnStart(Board board);
+
+    void applyOnTurn(Board board, Piece movingPiece, String from, String to);
 }

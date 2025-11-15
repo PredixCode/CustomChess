@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,7 +12,6 @@ import java.util.Set;
 import com.predixcode.core.board.Board;
 import com.predixcode.core.board.pieces.Piece;
 import com.predixcode.core.rules.Rule;
-import com.predixcode.core.rules.StandardRule;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
@@ -30,6 +30,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -68,14 +69,22 @@ public abstract class Gui extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         if (this.board == null) {
-            this.board = Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+            throw new IllegalStateException("Board not initialized before GUI start");
         }
 
+        initGame();
+        initGui(stage);
+    }
+
+    private void initGame() {
+        board.ensureRules();
         for (Rule r : board.rules) {
             System.out.println("Board has rule: " + r.getClass().getSimpleName());
+            r.applyOnStart(board);
         }
-        ensureRules();
+    }
 
+    private void initGui(Stage stage) {
         this.squares = new Rectangle[board.height][board.width];
         final double baseW = PADDING + board.width * TILE + PADDING;
         final double baseH = PADDING + board.height * TILE + PADDING;
@@ -88,7 +97,7 @@ public abstract class Gui extends Application {
         boardGroup.setLayoutX(PADDING);
         boardGroup.setLayoutY(PADDING);
 
-        // Layers
+        // Add layers
         boardGroup.getChildren().add(buildSquares());
         boardGroup.getChildren().add(highlightLayer);
         boardGroup.getChildren().add(pieceLayer);
@@ -98,19 +107,16 @@ public abstract class Gui extends Application {
 
         content.getChildren().add(boardGroup);
         content.getChildren().add(buildCoordinates());
-
         center.getChildren().add(content);
 
         // Right panel
         double panelWidth = 400;
         infoPanel = new GameInfoPanel(panelWidth);
-
-        // Root with right panel
         BorderPane root = new BorderPane();
         root.setCenter(center);
         root.setRight(infoPanel);
 
-        // Scene with extra width for the panel
+        // Build scene
         Scene scene = new Scene(root, baseW + panelWidth, baseH);
         stage.setTitle("Custom Chess");
         stage.setScene(scene);
@@ -132,21 +138,7 @@ public abstract class Gui extends Application {
 
         loadPieces();
         refreshPieces();
-
-        // Initial panel refresh
         infoPanel.refresh(board, moveHistory);
-    }
-
-    private void ensureRules() {
-        if (board.rules == null) {
-            board.rules = new java.util.ArrayList<>();
-        }
-        boolean hasStandard = board.rules.stream()
-            .anyMatch(r -> r instanceof StandardRule);
-        if (!hasStandard) {
-            System.out.println("[ensureRules] Injecting Standard rule");
-            board.rules.add(new StandardRule());
-        }
     }
 
     private Pane buildSquares() {
@@ -246,11 +238,11 @@ public abstract class Gui extends Application {
 
     private void refreshPieces() {
         // Build an identity-based membership of current pieces
-        java.util.IdentityHashMap<Piece, Boolean> currentMap = new java.util.IdentityHashMap<>();
+        IdentityHashMap<Piece, Boolean> currentMap = new IdentityHashMap<>();
         for (Piece p : board.pieces) currentMap.put(p, Boolean.TRUE);
 
         // Remove nodes for pieces that no longer exist (identity-based)
-        java.util.List<Piece> toRemove = new java.util.ArrayList<>();
+        List<Piece> toRemove = new ArrayList<>();
         for (Piece p : pieceNodes.keySet()) {
             if (!currentMap.containsKey(p)) toRemove.add(p);
         }
@@ -258,7 +250,6 @@ public abstract class Gui extends Application {
             ImageView iv = pieceNodes.remove(p);
             if (iv != null) pieceLayer.getChildren().remove(iv);
         }
-
         // Add nodes for new pieces (identity-based)
         for (Piece p : board.pieces) {
             if (!pieceNodes.containsKey(p)) {
@@ -269,7 +260,7 @@ public abstract class Gui extends Application {
                 iv.setSmooth(true);
                 DropShadow ds = new DropShadow();
                 ds.setRadius(8);
-                ds.setColor(javafx.scene.paint.Color.web("#00000040"));
+                ds.setColor(Color.web("#00000040"));
                 iv.setEffect(ds);
                 iv.setOnMouseClicked(e -> {
                     if (e.getButton() == MouseButton.PRIMARY) onSquareClick(p.getX(), p.getY());
@@ -279,7 +270,6 @@ public abstract class Gui extends Application {
                 placeNodeAt(iv, p.getX(), p.getY());
             }
         }
-
         // Sync positions (identity-based)
         for (Piece p : board.pieces) {
             ImageView iv = pieceNodes.get(p);

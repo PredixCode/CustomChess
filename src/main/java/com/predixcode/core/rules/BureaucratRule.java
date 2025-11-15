@@ -7,7 +7,7 @@ import com.predixcode.core.board.pieces.Piece;
 public class BureaucratRule extends StandardRule {
 
     @Override
-    public void apply(Board  board, Piece movingPiece, String from, String to) {
+    public void applyOnTurn(Board  board, Piece movingPiece, String from, String to) {
         throwIfIllegal(board, movingPiece, to, from);
 
         // Prepare move

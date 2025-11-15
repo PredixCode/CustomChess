@@ -9,6 +9,7 @@ import com.predixcode.core.board.pieces.Piece;
 import com.predixcode.core.board.pieces.Rook;
 import com.predixcode.core.colors.Color;
 import com.predixcode.core.rules.Rule;
+import com.predixcode.core.rules.StandardRule;
 
 public class Board {
     public int width;
@@ -47,7 +48,7 @@ public class Board {
 
         // Apply game rules
         for (Rule rule : rules) {
-            rule.apply(this, movingPiece, from, to);
+            rule.applyOnTurn(this, movingPiece, from, to);
         }
     }
 
@@ -64,6 +65,13 @@ public class Board {
 
     public boolean isEmpty(int x, int y) {
         return inBounds(x, y) && getPieceAt(x, y) == null;
+    }
+
+    public void ensureRules() {
+        if (rules.isEmpty()) {
+            System.out.println("Mising Game Rules, injecting STANDARD rule");
+            rules.add(new StandardRule());
+        }
     }
 
     public String toAlg(int x, int y) {
