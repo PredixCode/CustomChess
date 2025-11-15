@@ -1,7 +1,6 @@
 package com.predixcode.core.board.pieces;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -14,7 +13,14 @@ public abstract class Piece {
     protected Color color;
     protected String fenSymbol;
 
+    private static final List<Supplier<Piece>> TYPES = List.of(
+        Pawn::new, Knight::new, Bishop::new, Rook::new, Queen::new, King::new
+    );
+
     protected Piece() {}
+
+    public abstract Set<String> getLegalMoves(Board board);  // algebraic like "e4"
+    public abstract Set<int[]> attackedSquares(Board board);      // int[]{x,y}
 
     public void setPosition(int x, int y) { this.x = x; this.y = y; }
 
@@ -29,37 +35,24 @@ public abstract class Piece {
     }
 
     protected String getFenSymbol() {
-        return color.formatSymbol(fenSymbol);
+        return color != null ? color.formatSymbol(fenSymbol) : fenSymbol;
     }
 
-    // Deprecated: old offset-based API (kept for backward compatibility if anything still calls it)
-    @Deprecated
-    protected List<Integer[]> getMoves(int matrixX, int matrixY) {
-        throw new UnsupportedOperationException("Use pseudoLegalTargets/attackedSquares with Board instead.");
+    public static Piece initFromFen(char fenChar, int x, int y) {
+        for (Supplier<Piece> sup : TYPES) {
+            Piece probe = sup.get();
+            String base = probe.getFenSymbol();
+            if (base.equalsIgnoreCase(String.valueOf(fenChar))) {
+                Piece piece = sup.get();
+                return buildPiece(piece, fenChar, x, y);
+            }
+        }
+        return null;
     }
 
-    // New APIs for OO move generation
-    public abstract Set<String> pseudoLegalTargets(Board board);  // algebraic like "e4"
-    public abstract Set<int[]> attackedSquares(Board board);      // int[]{x,y}
-
-    // FEN Conversion
-    protected static final Map<Character, Supplier<Piece>> MATRIX = Map.of(
-        'p', Pawn::new,
-        'r', Rook::new,
-        'n', Knight::new,
-        'b', Bishop::new,
-        'k', King::new,
-        'q', Queen::new
-    );
-
-    // Build, color, and position a piece from a FEN character and board coords
-    public static Piece initialize(char fenChar, int x, int y) {
-        Supplier<Piece> sup = MATRIX.get(Character.toLowerCase(fenChar));
-        if (sup == null) return null;
-
-        Piece piece = sup.get();
+    private static Piece buildPiece(Piece piece, char fenChar, int x, int y) {
         piece.setColor(Character.isUpperCase(fenChar) ? Color.WHITE : Color.BLACK);
         piece.setPosition(x, y);
         return piece;
-    }
+    };
 }

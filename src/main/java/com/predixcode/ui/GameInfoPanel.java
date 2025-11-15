@@ -3,6 +3,7 @@ package com.predixcode.ui;
 import java.util.List;
 
 import com.predixcode.core.board.Board;
+import com.predixcode.core.board.FenAdapter;
 
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
@@ -95,6 +96,6 @@ public class GameInfoPanel extends VBox {
         movesArea.setScrollTop(Double.MAX_VALUE); // scroll to end
 
         // FEN
-        fenField.setText(board.toFen());
+        fenField.setText(FenAdapter.toFen(board));
     }
 }

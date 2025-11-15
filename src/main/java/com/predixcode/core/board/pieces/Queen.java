@@ -9,7 +9,7 @@ public class Queen extends Piece {
     public Queen() { this.fenSymbol = "q"; }
 
     @Override
-    public Set<String> pseudoLegalTargets(Board board) {
+    public Set<String> getLegalMoves(Board board) {
         Set<String> out = new LinkedHashSet<>();
         addRay(board, out,  1,  0);
         addRay(board, out, -1,  0);

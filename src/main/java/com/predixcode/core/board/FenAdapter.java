@@ -54,7 +54,7 @@ public final class FenAdapter {
                 if (Character.isDigit(ch)) {
                     x += Character.getNumericValue(ch);
                 } else {
-                    Piece piece = Piece.initialize(ch, x, y);
+                    Piece piece = Piece.initFromFen(ch, x, y);
                     if (piece != null) pieces.add(piece);
                     x++;
                 }
@@ -93,5 +93,35 @@ public final class FenAdapter {
             blackKing.setCastleKingSide(castling.contains("k"));
             blackKing.setCastleQueenSide(castling.contains("q"));
         }
+    }
+
+    public static String toFen(Board board) {
+        StringBuilder placement = new StringBuilder();
+        for (int row = 0; row < board.getYMatrix(); row++) {
+            int empty = 0;
+            for (int col = 0; col < board.getXMatrix(); col++) {
+                Piece piece = board.getPieceAt(col, row);
+                if (piece == null) {
+                    empty++;
+                } else {
+                    if (empty > 0) {
+                        placement.append(empty);
+                        empty = 0;
+                    }
+                    char c = piece.symbol().charAt(0);
+                    placement.append(c);
+                }
+            }
+            if (empty > 0) placement.append(empty);
+            if (row < board.getYMatrix() - 1) placement.append('/');
+        }
+
+        String side = (board.getActiveColor() == Color.WHITE) ? "w" :
+                      (board.getActiveColor() == Color.BLACK) ? "b" : "w";
+
+        String castling = board.getCastlingString();
+        String ep = board.getEnPassantAlgebraic();
+
+        return placement + " " + side + " " + castling + " " + ep + " " + board.getHalfmove() + " " + board.getFullmove();
     }
 }

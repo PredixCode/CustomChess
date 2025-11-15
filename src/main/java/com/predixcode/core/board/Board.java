@@ -29,7 +29,8 @@ public class Board {
         return FenAdapter.setupBoard(fen);
     }
 
-    // Setters used by FenAdapter
+    public int getXMatrix() { return xMatrix; }
+    public int getYMatrix() { return yMatrix; }
     public void setDimensions(int xMatrix, int yMatrix) { this.xMatrix = xMatrix; this.yMatrix = yMatrix; }
     public int getWidth() { return xMatrix; }
     public int getHeight() { return yMatrix; }
@@ -80,7 +81,6 @@ public class Board {
         }
     }
 
-    // Move with special rules: validation, castling, en passant, and rights/EP updates
     public void move(String from, String to) {
         int[] fromXY = FenAdapter.parseAlgebraicSquare(from);
         int[] toXY = FenAdapter.parseAlgebraicSquare(to);
@@ -95,7 +95,7 @@ public class Board {
         }
 
         // Validate destination is a pseudo-legal target for this piece
-        Set<String> targets = getPseudoLegalTargets(movingPiece);
+        Set<String> targets = getLegalMoves(movingPiece);
         String toAlg = to.toLowerCase();
         if (!targets.contains(toAlg)) {
             throw new IllegalArgumentException("Destination " + to + " is not a pseudo-legal target for " + from);
@@ -177,75 +177,9 @@ public class Board {
     }
 
     // Public API: pseudo-legal targets for a piece (algebraic like "e4")
-    public Set<String> getPseudoLegalTargets(Piece p) {
+    public Set<String> getLegalMoves(Piece p) {
         if (p == null) return new LinkedHashSet<>();
-        return p.pseudoLegalTargets(this);
-    }
-
-    public String toFen() {
-        StringBuilder placement = new StringBuilder();
-        for (int row = 0; row < yMatrix; row++) {
-            int empty = 0;
-            for (int col = 0; col < xMatrix; col++) {
-                Piece piece = getPieceAt(col, row);
-                if (piece == null) {
-                    empty++;
-                } else {
-                    if (empty > 0) {
-                        placement.append(empty);
-                        empty = 0;
-                    }
-                    char c = piece.symbol().charAt(0);
-                    placement.append(c);
-                }
-            }
-            if (empty > 0) placement.append(empty);
-            if (row < yMatrix - 1) placement.append('/');
-        }
-
-        String side = (activeColor == Color.WHITE) ? "w" :
-                      (activeColor == Color.BLACK) ? "b" : "w";
-
-        String castling = getCastlingString();
-        String ep = getEnPassantAlgebraic();
-
-        return placement + " " + side + " " + castling + " " + ep + " " + halfmove + " " + fullmove;
-    }
-
-    @Override
-    public String toString() {
-        // Use configured dimensions (defaults 8x8)
-        char[][] grid = new char[yMatrix][xMatrix];
-        for (int r = 0; r < yMatrix; r++) Arrays.fill(grid[r], '.');
-
-        for (Piece p : pieces) {
-            int x = p.getX();
-            int y = p.getY();
-            if (x >= 0 && x < xMatrix && y >= 0 && y < yMatrix) {
-                grid[y][x] = p.symbol().charAt(0);
-            }
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("  +-----------------+\n");
-        for (int row = 0; row < yMatrix; row++) {
-            int rank = yMatrix - row;
-            sb.append(rank).append(" | ");
-            for (int col = 0; col < xMatrix; col++) {
-                sb.append(grid[row][col]).append(' ');
-            }
-            sb.append("|\n");
-        }
-        sb.append("  +-----------------+\n");
-        sb.append("    a b c d e f g h\n\n");
-
-        sb.append("Active: ").append(activeColor != null ? activeColor : "unknown").append('\n');
-        sb.append("Castling: ").append(currentCastlingString()).append('\n');
-        sb.append("En Passant: ").append(getEnPassantAlgebraic()).append('\n');
-        sb.append("Halfmove: ").append(halfmove).append('\n');
-        sb.append("Fullmove: ").append(fullmove).append('\n');
-
-        return sb.toString();
+        return p.getLegalMoves(this);
     }
 
     public String toAlg(int x, int y) {
@@ -347,5 +281,41 @@ public class Board {
         }
         String s = (K ? "K" : "") + (Q ? "Q" : "") + (k ? "k" : "") + (q ? "q" : "");
         return s.isEmpty() ? "-" : s;
+    }
+
+    @Override
+    public String toString() {
+        // Use configured dimensions (defaults 8x8)
+        char[][] grid = new char[yMatrix][xMatrix];
+        for (int r = 0; r < yMatrix; r++) Arrays.fill(grid[r], '.');
+
+        for (Piece p : pieces) {
+            int x = p.getX();
+            int y = p.getY();
+            if (x >= 0 && x < xMatrix && y >= 0 && y < yMatrix) {
+                grid[y][x] = p.symbol().charAt(0);
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("  +-----------------+\n");
+        for (int row = 0; row < yMatrix; row++) {
+            int rank = yMatrix - row;
+            sb.append(rank).append(" | ");
+            for (int col = 0; col < xMatrix; col++) {
+                sb.append(grid[row][col]).append(' ');
+            }
+            sb.append("|\n");
+        }
+        sb.append("  +-----------------+\n");
+        sb.append("    a b c d e f g h\n\n");
+
+        sb.append("Active: ").append(activeColor != null ? activeColor : "unknown").append('\n');
+        sb.append("Castling: ").append(currentCastlingString()).append('\n');
+        sb.append("En Passant: ").append(getEnPassantAlgebraic()).append('\n');
+        sb.append("Halfmove: ").append(halfmove).append('\n');
+        sb.append("Fullmove: ").append(fullmove).append('\n');
+
+        return sb.toString();
     }
 }

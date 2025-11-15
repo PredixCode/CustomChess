@@ -14,7 +14,7 @@ public class Pawn extends Piece {
     }
 
     @Override
-    public Set<String> pseudoLegalTargets(Board board) {
+    public Set<String> getLegalMoves(Board board) {
         Set<String> out = new LinkedHashSet<>();
         int dir = (this.color == Color.WHITE) ? -1 : 1;
         int startRank = (this.color == Color.WHITE) ? 6 : 1;

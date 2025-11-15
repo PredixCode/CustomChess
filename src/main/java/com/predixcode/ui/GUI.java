@@ -293,7 +293,7 @@ public class GUI extends Application {
             if (p == null) return;
             selected = new int[] { x, y };
             highlightSelection(x, y);
-            legalTargets = board.getPseudoLegalTargets(p);
+            legalTargets = board.getLegalMoves(p);
             highlightTargets(legalTargets);
             return;
         }
@@ -304,7 +304,7 @@ public class GUI extends Application {
         if (clicked != null && selPiece != null && sameColor(clicked, selPiece)) {
             selected = new int[] { x, y };
             highlightSelection(x, y);
-            legalTargets = board.getPseudoLegalTargets(clicked);
+            legalTargets = board.getLegalMoves(clicked);
             highlightTargets(legalTargets);
             return;
         }

@@ -13,7 +13,7 @@ public class Knight extends Piece {
     }
 
     @Override
-    public Set<String> pseudoLegalTargets(Board board) {
+    public Set<String> getLegalMoves(Board board) {
         Set<String> out = new LinkedHashSet<>();
         int[][] deltas = new int[][]{
             { 1,  2}, { 2,  1}, { 2, -1}, { 1, -2},

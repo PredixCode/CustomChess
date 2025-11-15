@@ -9,7 +9,7 @@ public class Rook extends Piece {
     public Rook() { this.fenSymbol = "r"; }
 
     @Override
-    public Set<String> pseudoLegalTargets(Board board) {
+    public Set<String> getLegalMoves(Board board) {
         Set<String> out = new LinkedHashSet<>();
         addRay(board, out,  1,  0);
         addRay(board, out, -1,  0);

@@ -19,7 +19,7 @@ public class King extends Piece {
     public void setCastleQueenSide(boolean canCastle) { this.canCastleQueenSide = canCastle; }
 
     @Override
-    public Set<String> pseudoLegalTargets(Board board) {
+    public Set<String> getLegalMoves(Board board) {
         Set<String> out = new LinkedHashSet<>();
 
         // Normal king moves (one square in any direction)
