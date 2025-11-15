@@ -1,1 +1,1 @@
-CALL mvn "exec:java" "-Dexec.mainClass=com.predixcode.scenarios.Standard"
+CALL mvn "exec:java" "-Dexec.mainClass=com.predixcode.App"

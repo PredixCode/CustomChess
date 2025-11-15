@@ -34,7 +34,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-public class GUI extends Application {
+public abstract class GUI extends Application {
 
     private static final int SIZE = 8;
     private static final double TILE = 88; // tile size in px
@@ -65,7 +65,7 @@ public class GUI extends Application {
         if (this.board == null) {
             this.board = Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         }
-        
+
         for (Rule r : board.rules) {
             System.out.println("Board has rule: " + r.getClass().getSimpleName());
         }

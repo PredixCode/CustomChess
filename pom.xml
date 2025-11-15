@@ -30,7 +30,7 @@
                 <configuration>
                     <archive>
                     <manifest>
-                        <mainClass>com.predixcode.ui.GUI</mainClass>
+                        <mainClass>com.predixcode.App</mainClass>
                     </manifest>
                     </archive>
                 </configuration>
@@ -40,7 +40,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.predixcode.ui.GUI</mainClass>
+                    <mainClass>com.predixcode.App</mainClass>
                 </configuration>
             </plugin>
         </plugins>

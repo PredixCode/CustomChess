@@ -9,7 +9,7 @@ import javafx.stage.Stage;
 public class Bureaucrat extends GUI implements Scenario { 
 
     public static void main(String[] args) {
-        Application.launch(Standard.class, args);
+        Application.launch(Bureaucrat.class, args);
     }
     
     @Override
@@ -20,7 +20,7 @@ public class Bureaucrat extends GUI implements Scenario {
 
     @Override
     public Board createBoard() {
-        Board b = Board.fromFen("rnbqkbnr/pppcpppp/8/8/8/8/PPPCPPPP/RNBQKBNR w KQkq - 0 1");
+        Board b = Board.fromFen("rnbqkbnr/pppppppp/3c4/8/8/4C3/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         b.rules.add(new com.predixcode.core.rules.BureaucratRule());
         return b;
     }
