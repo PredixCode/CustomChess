@@ -24,4 +24,13 @@ public abstract class Color {
     public String toString() {
         return colorName != null ? colorName : super.toString();
     }
+
+    @Override
+    public boolean equals(Object Color) {
+        if (this == Color) return true;
+        if (Color == null || getClass() != Color.getClass()) return false;
+        Color other = (Color) Color;
+
+        return this.colorCode == other.colorCode || (this.colorName.equals(other.colorName) && this.colorCode == other.colorCode);
+    }
 }

@@ -53,8 +53,8 @@ public class GUI extends Application {
     private int[] lastFrom = null, lastTo = null;
 
     private final Paint selectColor = Paint.valueOf("#F6F66980"); // translucent yellow
-    private final Paint lastMoveColor = Paint.valueOf("#9FC76E80"); // translucent green
-    private final Paint targetDotColor = Paint.valueOf("#3A7EFDCC");
+    private final Paint lastMoveColor = Paint.valueOf("#f6f6693b");;
+    private final Paint targetDotColor = Paint.valueOf("#6161612a");
 
     private final List<String> moveHistory = new ArrayList<>();
     private GameInfoPanel infoPanel;
@@ -295,102 +295,122 @@ public class GUI extends Application {
         clearHighlights();
 
         if (selected == null) {
-            Piece p = board.getPieceAt(x, y); // use Board API
+            Piece p = board.getPieceAt(x, y);
             if (p == null) return;
             selected = new int[] { x, y };
             highlightSelection(x, y);
-            legalTargets = board.getPseudoLegalTargets(p); // Board generates targets
+            legalTargets = board.getPseudoLegalTargets(p);
             highlightTargets(legalTargets);
-        } else {
-            Piece clicked = board.getPieceAt(x, y);
-            Piece selPiece = board.getPieceAt(selected[0], selected[1]);
-            if (clicked != null && selPiece != null &&
-                sameColor(clicked, selPiece)) {
-                selected = new int[] { x, y };
-                highlightSelection(x, y);
-                legalTargets = board.getPseudoLegalTargets(clicked);
-                highlightTargets(legalTargets);
-                return;
+            return;
+        }
+
+        Piece selPiece = board.getPieceAt(selected[0], selected[1]);
+        Piece clicked = board.getPieceAt(x, y);
+
+        if (clicked != null && selPiece != null && sameColor(clicked, selPiece)) {
+            selected = new int[] { x, y };
+            highlightSelection(x, y);
+            legalTargets = board.getPseudoLegalTargets(clicked);
+            highlightTargets(legalTargets);
+            return;
+        }
+
+        if (selPiece == null) { selected = null; return; }
+
+        String fromAlg = board.toAlg(selected[0], selected[1]);
+        String toAlg = board.toAlg(x, y);
+
+        if (!legalTargets.contains(toAlg)) {
+            selected = null;
+            return;
+        }
+
+        // Pre-move: compute nodes we might animate/fade, but do NOT mutate the model
+        int fromX = selected[0], fromY = selected[1];
+        ImageView capturedNode = null;
+
+        // Regular capture node (piece at destination prior to move)
+        Piece preCaptured = board.getPieceAt(x, y);
+
+        // En passant capture node (destination empty, pawn moves diagonally)
+        boolean isPawn = selPiece.getClass().getSimpleName().equals("Pawn");
+        boolean epAttempt = isPawn && fromX != x && (preCaptured == null);
+        Piece epCaptured = epAttempt ? board.getPieceAt(x, fromY) : null;
+
+        if (preCaptured != null) {
+            capturedNode = pieceNodes.get(preCaptured);
+        } else if (epCaptured != null) {
+            capturedNode = pieceNodes.get(epCaptured);
+        }
+
+        try {
+            // Move the model first; this will handle captures, EP, castling, clocks, etc.
+            board.move(fromAlg, toAlg);
+            lastFrom = new int[]{fromX, fromY};
+            lastTo = new int[]{x, y};
+
+            // Animate the piece from its original square to the destination
+            animateMove(selPiece, fromX, fromY, x, y, capturedNode);
+
+            // If we faded a captured node, drop it from the map now
+            if (preCaptured != null && !board.getPieces().contains(preCaptured)) {
+                pieceNodes.remove(preCaptured);
+            } else if (epCaptured != null && !board.getPieces().contains(epCaptured)) {
+                pieceNodes.remove(epCaptured);
             }
 
-            String fromAlg = board.toAlg(selected[0], selected[1]);
-            String toAlg = board.toAlg(x, y);
-
-            if (!legalTargets.contains(toAlg)) {
-                selected = null;
-                return;
-            }
-
-            Piece captured = board.getPieceAt(x, y);
-            ImageView capturedNode = null;
-            if (captured != null) {
-                capturedNode = pieceNodes.get(captured);
-                board.getPieces().remove(captured);
-            }
-
-            try {
-                lastFrom = new int[]{selected[0], selected[1]};
-                lastTo = new int[]{x, y};
-                animateMove(selPiece, x, y, capturedNode);
-                board.move(fromAlg, toAlg);
-
-                // Record move and refresh panel
-                String ply = fromAlg + "-" + toAlg;
-                moveHistory.add(ply);
-                infoPanel.refresh(board, moveHistory);
-
-            } catch (Exception ex) {
-                if (captured != null && !board.getPieces().contains(captured)) {
-                    board.getPieces().add(captured);
-                }
-            } finally {
-                selected = null;
-                legalTargets.clear();
-                highlightLastMove(lastFrom, lastTo);
-            }
+            // Record move and refresh panel
+            String ply = fromAlg + "-" + toAlg;
+            moveHistory.add(ply);
+            infoPanel.refresh(board, moveHistory);
+        } catch (Exception ex) {
+            // Move failed; do nothing to the model or nodes, and optionally log ex
+            System.err.println("Move rejected: " + ex.getMessage());
+        } finally {
+            selected = null;
+            legalTargets.clear();
+            highlightLastMove(lastFrom, lastTo);
         }
     }
 
-    private void animateMove(Piece p, int toX, int toY, ImageView capturedNode) {
-        ImageView iv = pieceNodes.get(p);
-        if (iv == null) return;
+    private void animateMove(Piece p, int fromX, int fromY, int toX, int toY, ImageView capturedNode) {
+    ImageView iv = pieceNodes.get(p);
+    if (iv == null) return;
 
-        double fromLayoutX = snapX(p.getX());
-        double fromLayoutY = snapY(p.getY());
-        double toLayoutX = snapX(toX);
-        double toLayoutY = snapY(toY);
+    double fromLayoutX = snapX(fromX);
+    double fromLayoutY = snapY(fromY);
+    double toLayoutX = snapX(toX);
+    double toLayoutY = snapY(toY);
 
-        // Capture fade-out first (under 120ms), then move
-        Timeline tl = new Timeline();
-        int time = 200;
+    Timeline tl = new Timeline();
+    int time = 200;
 
-        if (capturedNode != null) {
-            FadeTransition fade = new FadeTransition(Duration.millis(120), capturedNode);
-            fade.setFromValue(1.0);
-            fade.setToValue(0.0);
-            fade.setOnFinished(e -> pieceLayer.getChildren().remove(capturedNode));
-            fade.play();
-        }
-
-        // Animate piece to new square
-        iv.toFront();
-        tl.getKeyFrames().addAll(
-            new KeyFrame(Duration.ZERO,
-                new KeyValue(iv.layoutXProperty(), fromLayoutX),
-                new KeyValue(iv.layoutYProperty(), fromLayoutY)
-            ),
-            new KeyFrame(Duration.millis(time),
-                new KeyValue(iv.layoutXProperty(), toLayoutX),
-                new KeyValue(iv.layoutYProperty(), toLayoutY)
-            )
-        );
-        tl.setOnFinished(e -> {
-            // Update model coordinates for the node
-            placeNodeAt(iv, toX, toY);
-            refreshPieces(); // sync in case of other state changes
-        });
-        tl.play();
+    // Fade captured AFTER a successful move (we call this only post-move)
+    if (capturedNode != null) {
+        FadeTransition fade = new FadeTransition(Duration.millis(120), capturedNode);
+        fade.setFromValue(1.0);
+        fade.setToValue(0.0);
+        fade.setOnFinished(e -> pieceLayer.getChildren().remove(capturedNode));
+        fade.play();
     }
+
+    iv.toFront();
+    tl.getKeyFrames().addAll(
+        new KeyFrame(Duration.ZERO,
+            new KeyValue(iv.layoutXProperty(), fromLayoutX),
+            new KeyValue(iv.layoutYProperty(), fromLayoutY)
+        ),
+        new KeyFrame(Duration.millis(time),
+            new KeyValue(iv.layoutXProperty(), toLayoutX),
+            new KeyValue(iv.layoutYProperty(), toLayoutY)
+        )
+    );
+    tl.setOnFinished(e -> {
+        placeNodeAt(iv, toX, toY);
+        refreshPieces(); // sync other state (e.g., rook after castling, EP removal)
+    });
+    tl.play();
+}
 
     private void placeNodeAt(ImageView iv, int x, int y) {
         iv.setLayoutX(snapX(x));

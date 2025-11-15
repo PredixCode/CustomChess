@@ -1,33 +1,57 @@
 package com.predixcode.core.board.pieces;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import com.predixcode.core.board.Board;
 
 public class Rook extends Piece {
+    public Rook() { this.fenSymbol = "r"; }
 
-    public Rook() {
-        super();
-        this.fenSymbol = "r";
+    @Override
+    public Set<String> pseudoLegalTargets(Board board) {
+        Set<String> out = new LinkedHashSet<>();
+        addRay(board, out,  1,  0);
+        addRay(board, out, -1,  0);
+        addRay(board, out,  0,  1);
+        addRay(board, out,  0, -1);
+        return out;
     }
 
     @Override
-    protected List<Integer[]> getMoves(int matrixX, int matrixY) {
-        List<Integer[]> moves = new ArrayList<>();
-        // Orthogonals
-        addRay(moves, matrixX, matrixY,  1,  0);
-        addRay(moves, matrixX, matrixY, -1,  0);
-        addRay(moves, matrixX, matrixY,  0,  1);
-        addRay(moves, matrixX, matrixY,  0, -1);
-        return moves;
+    public Set<int[]> attackedSquares(Board board) {
+        Set<int[]> out = new LinkedHashSet<>();
+        addAttackRay(board, out,  1,  0);
+        addAttackRay(board, out, -1,  0);
+        addAttackRay(board, out,  0,  1);
+        addAttackRay(board, out,  0, -1);
+        return out;
     }
 
-    private void addRay(List<Integer[]> moves, int matrixX, int matrixY, int dx, int dy) {
+    private void addRay(Board board, Set<String> out, int dx, int dy) {
         int nx = this.x + dx;
         int ny = this.y + dy;
-        while (nx >= 0 && nx < matrixX && ny >= 0 && ny < matrixY) {
-            moves.add(new Integer[]{nx - this.x, ny - this.y});
-            nx += dx;
-            ny += dy;
+        while (board.inBounds(nx, ny)) {
+            var at = board.getPieceAt(nx, ny);
+            if (at == null) {
+                out.add(board.toAlg(nx, ny));
+            } else {
+                if (at.getColor() != this.color) {
+                    out.add(board.toAlg(nx, ny));
+                }
+                break;
+            }
+            nx += dx; ny += dy;
+        }
+    }
+
+    private void addAttackRay(Board board, Set<int[]> out, int dx, int dy) {
+        int nx = this.x + dx;
+        int ny = this.y + dy;
+        while (board.inBounds(nx, ny)) {
+            out.add(new int[]{nx, ny});
+            if (board.getPieceAt(nx, ny) != null) break; // stop at first piece
+            nx += dx; ny += dy;
         }
     }
 }

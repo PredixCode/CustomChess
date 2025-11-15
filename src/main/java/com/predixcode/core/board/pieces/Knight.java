@@ -1,7 +1,9 @@
 package com.predixcode.core.board.pieces;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import com.predixcode.core.board.Board;
 
 public class Knight extends Piece {
 
@@ -11,8 +13,8 @@ public class Knight extends Piece {
     }
 
     @Override
-    protected List<Integer[]> getMoves(int matrixX, int matrixY) {
-        List<Integer[]> moves = new ArrayList<>();
+    public Set<String> pseudoLegalTargets(Board board) {
+        Set<String> out = new LinkedHashSet<>();
         int[][] deltas = new int[][]{
             { 1,  2}, { 2,  1}, { 2, -1}, { 1, -2},
             {-1, -2}, {-2, -1}, {-2,  1}, {-1,  2}
@@ -20,10 +22,27 @@ public class Knight extends Piece {
         for (int[] d : deltas) {
             int tx = this.x + d[0];
             int ty = this.y + d[1];
-            if (tx >= 0 && tx < matrixX && ty >= 0 && ty < matrixY) {
-                moves.add(new Integer[]{d[0], d[1]});
+            if (!board.inBounds(tx, ty)) continue;
+            var at = board.getPieceAt(tx, ty);
+            if (at == null || at.getColor() != this.color) {
+                out.add(board.toAlg(tx, ty));
             }
         }
-        return moves;
+        return out;
+    }
+
+    @Override
+    public Set<int[]> attackedSquares(Board board) {
+        Set<int[]> out = new LinkedHashSet<>();
+        int[][] deltas = new int[][]{
+            { 1,  2}, { 2,  1}, { 2, -1}, { 1, -2},
+            {-1, -2}, {-2, -1}, {-2,  1}, {-1,  2}
+        };
+        for (int[] d : deltas) {
+            int tx = this.x + d[0];
+            int ty = this.y + d[1];
+            if (board.inBounds(tx, ty)) out.add(new int[]{tx, ty});
+        }
+        return out;
     }
 }

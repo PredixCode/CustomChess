@@ -2,8 +2,10 @@ package com.predixcode.core.board.pieces;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
+import com.predixcode.core.board.Board;
 import com.predixcode.core.colors.Color;
 
 public abstract class Piece {
@@ -17,11 +19,9 @@ public abstract class Piece {
     public void setPosition(int x, int y) { this.x = x; this.y = y; }
 
     public int getX() { return x; }
-    
     public int getY() { return y; }
 
     public void setColor(Color color) { this.color = color; }
-
     public Color getColor() { return this.color; }
 
     public String symbol() {
@@ -32,7 +32,15 @@ public abstract class Piece {
         return color.formatSymbol(fenSymbol);
     }
 
-    protected abstract List<Integer[]> getMoves(int matrixX, int matrixY);
+    // Deprecated: old offset-based API (kept for backward compatibility if anything still calls it)
+    @Deprecated
+    protected List<Integer[]> getMoves(int matrixX, int matrixY) {
+        throw new UnsupportedOperationException("Use pseudoLegalTargets/attackedSquares with Board instead.");
+    }
+
+    // New APIs for OO move generation
+    public abstract Set<String> pseudoLegalTargets(Board board);  // algebraic like "e4"
+    public abstract Set<int[]> attackedSquares(Board board);      // int[]{x,y}
 
     // FEN Conversion
     protected static final Map<Character, Supplier<Piece>> MATRIX = Map.of(
