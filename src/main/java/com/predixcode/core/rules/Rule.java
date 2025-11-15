@@ -22,7 +22,7 @@ public abstract class Rule {
         applyOnTurn(board, movingPiece, fromXY, toXY);
     }
 
-    public void throwIfIllegal(Board board, Piece movingPiece, int[] fromXY, int[] toXY) {
+    public void checkIllegal(Board board, Piece movingPiece, int[] fromXY, int[] toXY) {
         if (board.activeColor != null && !movingPiece.getColor().equals(board.activeColor)) {
             throw new IllegalStateException("It is not " + movingPiece.getColor() + "'s turn");
         }
@@ -45,8 +45,6 @@ public abstract class Rule {
         if (enPassanteDone) {
             isCapture = true;
         }
-        // Update en passant target (only relevant for a 2-square pawn push)
-        updateEnPassantTargetIfApplicable(board, movingPiece, fromXY, toXY);
         return isCapture;
     }
 
@@ -54,22 +52,39 @@ public abstract class Rule {
         boolean isKing = movingPiece instanceof King;
         if (isKing && isCastlingMove(fromXY, toXY)) {
             handleCastling(board, (King) movingPiece, fromXY, toXY);
-            board.updateCastlingRights(movingPiece, fromXY[0], fromXY[1], toXY[0], toXY[1], isCapture);
         } 
     }
 
-    public void nextTurn(Board board, Piece movingPiece, boolean isCapture) {
+    public void updateSpecialMoveStates(Board board, Piece movingPiece, int[] fromXY, int[] toXY, boolean isCapture) {
+        updateEnPassantTargetIfApplicable(board, movingPiece, fromXY, toXY);
+        board.updateCastlingRights(movingPiece, fromXY[0], fromXY[1], toXY[0], toXY[1], false);
+    }
+
+    public void checkForEndConditions(Board board, Piece movingPiece) {
+        Color opponent = movingPiece.getColor().opposite();
+        boolean opponentInCheck = isInCheck(board, opponent);
+
+        // Check mate
+        if (opponentInCheck && !hasAnyLegalMove(board, opponent)) {
+            throw new IllegalStateException("Checkmate! " + movingPiece.getColor() + " wins.");
+        }
+        // Stalemate
+        if (!opponentInCheck && !hasAnyLegalMove(board, opponent)) {
+             throw new IllegalStateException("Stalemate!");
+        }
+    }
+
+    public void submitNextTurn(Board board, Piece movingPiece, boolean isCapture) {
         updateHalfmove(board, movingPiece, isCapture);
         updateFullMove(board);
         switchPlayer(board);
     }
 
-    // ================== Check / Checkmate helpers ===================
-
+    // ================== Helpers ===================
     /**
      * Returns true if the given color's king is currently in check.
      */
-    public boolean isInCheck(Board board, Color color) {
+    protected boolean isInCheck(Board board, Color color) {
         int[] kingXY = board.getKing(color).getXY();
         if (kingXY == null) return false; // No king found; treat as not in check.
         return board.isSquareAttacked(color.opposite(), kingXY[0], kingXY[1]);
@@ -158,7 +173,7 @@ public abstract class Rule {
      * Returns true if the given color has at least one legal move
      * that does not leave its own king in check.
      */
-    public boolean hasAnyLegalMove(Board board, Color color) {
+    protected boolean hasAnyLegalMove(Board board, Color color) {
         for (Piece p : board.pieces) {
             if (p.getColor() != color) continue;
             Set<String> moves = p.getLegalMoves(board);
@@ -178,7 +193,7 @@ public abstract class Rule {
      * Returns true if the given color is currently checkmated.
      * i.e., in check and has no legal moves that resolve it.
      */
-    public boolean isCheckmate(Board board, Color color) {
+    protected boolean isCheckmate(Board board, Color color) {
         return isInCheck(board, color) && !hasAnyLegalMove(board, color);
     }
 

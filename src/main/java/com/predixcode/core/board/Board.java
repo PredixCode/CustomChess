@@ -31,7 +31,6 @@ public class Board {
 
     public void setPieces(List<Piece> pieces) { this.pieces = pieces != null ? pieces : new ArrayList<>(); }
 
-    // En Passant
     public void setEnPassant(int[] enPassant) { this.enPassant = enPassant != null ? enPassant : new int[]{-1, -1}; }
     public int[] getEnPassantXY() { return new int[]{ enPassant[0], enPassant[1] }; }
     public void clearEnPassant() { this.enPassant[0] = -1; this.enPassant[1] = -1; }
