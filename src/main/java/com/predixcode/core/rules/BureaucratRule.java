@@ -33,7 +33,7 @@ public class BureaucratRule extends StandardRule {
 
         if (captured != null) {
             if (isBureaucrat) {
-                captured.switchColor();
+                captured.actionOnCapture(board);
             } else {
                 board.pieces.remove(captured);
             }

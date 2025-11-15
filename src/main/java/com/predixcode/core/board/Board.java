@@ -35,12 +35,7 @@ public class Board {
     public int[] getEnPassantXY() { return new int[]{ enPassant[0], enPassant[1] }; }
     public void clearEnPassant() { this.enPassant[0] = -1; this.enPassant[1] = -1; }
 
-    public String getEnPassantAlgebraic() {
-        if (enPassant[0] < 0 || enPassant[1] < 0) return "-";
-        return toAlg(enPassant[0], enPassant[1]);
-    }
 
-    // ========== Piece access and board state ==========
     public void applyTurn(String from, String to) { 
         // Check if move is invalid, then throw
         int[] fromXY = fromAlg(from);
@@ -82,20 +77,18 @@ public class Board {
         if (alg == null) throw new IllegalArgumentException("Square is null");
         alg = alg.trim();
         if (alg.equals("-")) return new int[]{-1, -1};
-        if (alg.length() < 2) throw new IllegalArgumentException("Invalid algebraic square: " + alg);
+        if (alg.length() < 2) throw new IllegalArgumentException("Invalid move, must involve ROW and RANK like 'a1', 'r8':" + alg);
 
+        // Parse file
         char fileCh = Character.toLowerCase(alg.charAt(0));
         if (fileCh < 'a' || fileCh >= ('a' + width)) {
             throw new IllegalArgumentException("File out of range: " + alg);
         }
         int file = fileCh - 'a';
 
-        // Support standard chess ranks 1..8 (single digit). If you later support >9 ranks, parse substring(1).
-        char rankCh = alg.charAt(1);
-        if (rankCh < '1' || rankCh > '0' + height) {
-            throw new IllegalArgumentException("Rank out of range: " + alg);
-        }
-        int rank = rankCh - '0';
+        // Parse rank
+        String rankStr = alg.substring(1,alg.length());
+        int rank = Integer.parseInt(rankStr);
         int y = height - rank;
         return new int[]{file, y};
     }
@@ -125,7 +118,7 @@ public class Board {
         return null;
     }
 
-    public void updateCastlingRightsAfterMove(Piece mover, int fromX, int fromY, int toX, int toY, boolean isCapture) {
+    public void updateCastlingRights(Piece mover, int fromX, int fromY, int toX, int toY, boolean isCapture) {
         // If king moved, clear its rights
         if (mover instanceof King king) {
             king.setCastleKingSide(false);
@@ -198,7 +191,7 @@ public class Board {
 
         sb.append("Active: ").append(activeColor != null ? activeColor : "unknown").append('\n');
         sb.append("Castling: ").append(FenAdapter.getCastlingString(this)).append('\n');
-        sb.append("En Passant: ").append(getEnPassantAlgebraic()).append('\n');
+        sb.append("En Passant: ").append(FenAdapter.getEnPassantString(this)).append('\n');
         sb.append("Halfmove: ").append(halfmove).append('\n');
         sb.append("Fullmove: ").append(fullmove).append('\n');
 

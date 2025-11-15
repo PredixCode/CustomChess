@@ -21,18 +21,15 @@ public abstract class Piece {
 
     public abstract Set<String> getLegalMoves(Board board);  // algebraic like "e4"
     public abstract Set<int[]> attackedSquares(Board board);      // int[]{x,y}
+    public void actionOnCapture(Board board) {}
 
     public void setPosition(int x, int y) { this.x = x; this.y = y; }
-
     public int getX() { return x; }
     public int getY() { return y; }
 
     public void setColor(Color color) { this.color = color; }
     public Color getColor() { return this.color; }
-
-    public void switchColor() {
-        this.color = this.color.opposite();
-    }
+    public void switchColor() { this.color = this.color.opposite();}
 
     public String getSymbol() {
         return color == null ? fenSymbol : color.formatSymbol(fenSymbol);
@@ -43,14 +40,10 @@ public abstract class Piece {
         return "/pieces/" + theme + "/" + name + ".png";
     }
 
-    protected String getFenSymbol() {
-        return color != null ? color.formatSymbol(fenSymbol) : fenSymbol;
-    }
-
     public static Piece initFromFen(char fenChar, int x, int y) {
         for (Supplier<Piece> sup : TYPES) {
             Piece probe = sup.get();
-            String base = probe.getFenSymbol();
+            String base = probe.getSymbol();
             if (base.equalsIgnoreCase(String.valueOf(fenChar))) {
                 Piece piece = sup.get();
                 return buildPiece(piece, fenChar, x, y);

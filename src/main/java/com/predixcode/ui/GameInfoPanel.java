@@ -76,7 +76,7 @@ public class GameInfoPanel extends VBox {
         // Stats
         lblActive.setText(board.activeColor != null ? board.activeColor.getName() : "-");
         lblCastling.setText(FenAdapter.getCastlingString(board));
-        lblEnPassant.setText(board.getEnPassantAlgebraic());
+        lblEnPassant.setText(FenAdapter.getEnPassantString(board));
         lblHalfmove.setText(String.valueOf(board.halfmove));
         lblFullmove.setText(String.valueOf(board.fullmove));
 

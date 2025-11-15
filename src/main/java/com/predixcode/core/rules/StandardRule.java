@@ -57,7 +57,7 @@ public class StandardRule implements Rule {
         boolean isKing = movingPiece instanceof King;
         if (isKing && isCastlingMove(fromXY, toXY)) {
             handleCastling(board, (King) movingPiece, fromXY, toXY);
-            board.updateCastlingRightsAfterMove(movingPiece, fromXY[0], fromXY[1], toXY[0], toXY[1], isCapture);
+            board.updateCastlingRights(movingPiece, fromXY[0], fromXY[1], toXY[0], toXY[1], isCapture);
         } 
     }
 

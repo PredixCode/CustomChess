@@ -28,4 +28,13 @@ public class Bureaucrat extends Piece {
     public Set<int[]> attackedSquares(Board board) {
         return new LinkedHashSet<>();
     }
+
+    @Override
+    public void actionOnCapture(Board board) {
+        switchColor();
+        Set<String> afterCaptureChoices = getLegalMoves(board);
+        String newPos = afterCaptureChoices.iterator().next();
+        int[] toXY = board.fromAlg(newPos);
+        setPosition(toXY[0], toXY[1]);
+    }
 }

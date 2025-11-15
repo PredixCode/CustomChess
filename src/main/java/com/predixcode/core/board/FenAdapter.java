@@ -75,7 +75,7 @@ public final class FenAdapter {
                       (board.activeColor == Color.BLACK) ? "b" : "w";
 
         String castling = FenAdapter.getCastlingString(board);
-        String ep = board.getEnPassantAlgebraic();
+        String ep = getEnPassantString(board);
 
         return placement + " " + side + " " + castling + " " + ep + " " + board.halfmove + " " + board.fullmove;
     }
@@ -96,6 +96,11 @@ public final class FenAdapter {
         }
         String s = (K ? "K" : "") + (Q ? "Q" : "") + (k ? "k" : "") + (q ? "q" : "");
         return s.isEmpty() ? "-" : s;
+    }
+
+    public static String getEnPassantString(Board board) {
+        if (board.enPassant[0] < 0 || board.enPassant[1] < 0) return "-";
+        return board.toAlg(board.enPassant[0], board.enPassant[1]);
     }
 
     private static List<Piece> buildPieces(List<String> rows) {
