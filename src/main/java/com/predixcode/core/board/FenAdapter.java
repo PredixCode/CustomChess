@@ -24,19 +24,25 @@ public final class FenAdapter {
 
         Board board = new Board();
 
-        // dimensions (standard chess)
+        // dimensions
         List<String> rows = Arrays.asList(placement.split("/"));
-        board.setDimensions(8, rows.size());
+        board.xMatrix = rows.getFirst().length();
+        board.yMatrix = rows.size();
 
         // pieces
         List<Piece> pieces = buildPieces(rows);
         board.setPieces(pieces);
 
         // board data
-        board.setActiveColor(Color.fromChar(active));
-        board.setHalfmove(halfmove);
-        board.setFullmove(fullmove);
-        board.setEnPassant(parseAlgebraicSquare(epStr));
+        board.activeColor = Color.fromChar(active);
+        board.halfmove = halfmove;
+        board.fullmove = fullmove;
+        if (!"-".equals(epStr)) {
+            int[] epXY = board.fromAlg(epStr);
+            board.setEnPassant(epXY);
+        } else {
+            board.clearEnPassant();
+        }
 
         // castling rights go straight to the kings
         applyCastlingToKings(pieces, castling);
@@ -63,15 +69,22 @@ public final class FenAdapter {
         return pieces;
     }
 
-    public static int[] parseAlgebraicSquare(String sq) {
-        if (sq == null || "-".equals(sq)) return new int[]{-1, -1};
-        if (sq.length() != 2) return new int[]{-1, -1};
-        char file = sq.charAt(0); // a..h
-        char rank = sq.charAt(1); // 1..8
-        int x = file - 'a';       // 0..7
-        int y = 8 - (rank - '0'); // rank 8 -> y=0, rank 1 -> y=7
-        if (x < 0 || x > 7 || y < 0 || y > 7) return new int[]{-1, -1};
-        return new int[]{x, y};
+    public static String getCastlingFen(Board board) {
+        boolean K = false, Q = false, k = false, q = false;
+        for (Piece p : board.pieces) {
+            if (p instanceof King king) {
+                boolean isWhite = p.getColor() == Color.WHITE;
+                if (isWhite) {
+                    if (king.canCastleKingSide()) K = true;
+                    if (king.canCastleQueenSide()) Q = true;
+                } else {
+                    if (king.canCastleKingSide()) k = true;
+                    if (king.canCastleQueenSide()) q = true;
+                }
+            }
+        }
+        String s = (K ? "K" : "") + (Q ? "Q" : "") + (k ? "k" : "") + (q ? "q" : "");
+        return s.isEmpty() ? "-" : s;
     }
 
     public static void applyCastlingToKings(List<Piece> pieces, String castling) {
@@ -97,9 +110,9 @@ public final class FenAdapter {
 
     public static String toFen(Board board) {
         StringBuilder placement = new StringBuilder();
-        for (int row = 0; row < board.getYMatrix(); row++) {
+        for (int row = 0; row < board.yMatrix; row++) {
             int empty = 0;
-            for (int col = 0; col < board.getXMatrix(); col++) {
+            for (int col = 0; col < board.xMatrix; col++) {
                 Piece piece = board.getPieceAt(col, row);
                 if (piece == null) {
                     empty++;
@@ -108,20 +121,20 @@ public final class FenAdapter {
                         placement.append(empty);
                         empty = 0;
                     }
-                    char c = piece.symbol().charAt(0);
+                    char c = piece.getSymbol().charAt(0);
                     placement.append(c);
                 }
             }
             if (empty > 0) placement.append(empty);
-            if (row < board.getYMatrix() - 1) placement.append('/');
+            if (row < board.yMatrix - 1) placement.append('/');
         }
 
-        String side = (board.getActiveColor() == Color.WHITE) ? "w" :
-                      (board.getActiveColor() == Color.BLACK) ? "b" : "w";
+        String side = (board.activeColor == Color.WHITE) ? "w" :
+                      (board.activeColor == Color.BLACK) ? "b" : "w";
 
-        String castling = board.getCastlingString();
+        String castling = FenAdapter.getCastlingFen(board);
         String ep = board.getEnPassantAlgebraic();
 
-        return placement + " " + side + " " + castling + " " + ep + " " + board.getHalfmove() + " " + board.getFullmove();
+        return placement + " " + side + " " + castling + " " + ep + " " + board.halfmove + " " + board.fullmove;
     }
 }

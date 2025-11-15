@@ -14,7 +14,7 @@ public abstract class Piece {
     protected String fenSymbol;
 
     private static final List<Supplier<Piece>> TYPES = List.of(
-        Pawn::new, Knight::new, Bishop::new, Rook::new, Queen::new, King::new
+        Pawn::new, Knight::new, Bishop::new, Rook::new, Queen::new, King::new, Bureaucrat::new
     );
 
     protected Piece() {}
@@ -30,8 +30,13 @@ public abstract class Piece {
     public void setColor(Color color) { this.color = color; }
     public Color getColor() { return this.color; }
 
-    public String symbol() {
+    public String getSymbol() {
         return color == null ? fenSymbol : color.formatSymbol(fenSymbol);
+    }
+
+    public String getImagePath(String theme) {
+        String name = getColor().getSymbol() + getSymbol().toUpperCase();
+        return "/pieces/" + theme + "/" + name + ".png";
     }
 
     protected String getFenSymbol() {

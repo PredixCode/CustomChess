@@ -2,59 +2,56 @@ package com.predixcode.core.board;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import com.predixcode.core.board.pieces.King;
-import com.predixcode.core.board.pieces.Pawn;
 import com.predixcode.core.board.pieces.Piece;
 import com.predixcode.core.board.pieces.Rook;
 import com.predixcode.core.colors.Color;
+import com.predixcode.core.rules.Rule;
 
 public class Board {
-    private int xMatrix = 8;
-    private int yMatrix = 8;
+    public int xMatrix = 8;
+    public int yMatrix = 8;
 
-    private int halfmove;
-    private int fullmove;
-    // enPassant as board coordinates [x, y]; -1 means none
-    private int[] enPassant = new int[] { -1, -1 };
+    public int halfmove;
+    public int fullmove;
+    public int[] enPassant = new int[] { -1, -1 }; // enPassant as board coordinates [x, y]; -1 means none
 
-    private Color activeColor;
+    public Color activeColor;
 
-    List<Piece> pieces = new ArrayList<>();
+    public List<Piece> pieces = new ArrayList<>();
+    public List<Rule> rules = new ArrayList<>();
 
+    //  ========= Board initialization ==========
     public static Board fromFen(String fen) {
         return FenAdapter.setupBoard(fen);
     }
 
-    public int getXMatrix() { return xMatrix; }
-    public int getYMatrix() { return yMatrix; }
-    public void setDimensions(int xMatrix, int yMatrix) { this.xMatrix = xMatrix; this.yMatrix = yMatrix; }
-    public int getWidth() { return xMatrix; }
-    public int getHeight() { return yMatrix; }
+    public void setPieces(List<Piece> pieces) { this.pieces = pieces != null ? pieces : new ArrayList<>(); }
 
-    public void setHalfmove(int halfmove) { this.halfmove = halfmove; }
-    public int getHalfmove() { return halfmove; }
-    public void setFullmove(int fullmove) { this.fullmove = fullmove; }
-    public int getFullmove() { return fullmove; }
-
+    // En Passant
     public void setEnPassant(int[] enPassant) { this.enPassant = enPassant != null ? enPassant : new int[]{-1, -1}; }
     public int[] getEnPassantXY() { return new int[]{ enPassant[0], enPassant[1] }; }
     public void clearEnPassant() { this.enPassant[0] = -1; this.enPassant[1] = -1; }
 
-    public void setActiveColor(Color activeColor) { this.activeColor = activeColor; }
-    public Color getActiveColor() { return activeColor; }
-
-    public void setPieces(List<Piece> pieces) { this.pieces = pieces != null ? pieces : new ArrayList<>(); }
-    public List<Piece> getPieces() { return pieces; }
-
-    public String getCastlingString() { return currentCastlingString(); }
-
     public String getEnPassantAlgebraic() {
         if (enPassant[0] < 0 || enPassant[1] < 0) return "-";
         return toAlg(enPassant[0], enPassant[1]);
+    }
+
+    // ========== Piece access and board state ==========
+    public void move(String from, String to) { 
+        int[] fromXY = fromAlg(from);
+        int[] toXY = fromAlg(to);
+        if (fromXY == null || toXY == null) throw new IllegalArgumentException("Invalid move coordinates");
+
+        Piece movingPiece = getPieceAt(fromXY[0], fromXY[1]);
+        if (movingPiece == null) throw new IllegalArgumentException("No piece at source square: " + from);
+
+        for (Rule rule : rules) {
+            rule.apply(this, movingPiece, from, to);
+        }
     }
 
     public Piece getPieceAt(int x, int y) {
@@ -81,120 +78,34 @@ public class Board {
         }
     }
 
-    public void move(String from, String to) {
-        int[] fromXY = FenAdapter.parseAlgebraicSquare(from);
-        int[] toXY = FenAdapter.parseAlgebraicSquare(to);
-        if (fromXY == null || toXY == null) throw new IllegalArgumentException("Invalid move coordinates");
-
-        Piece movingPiece = getPieceAt(fromXY[0], fromXY[1]);
-        if (movingPiece == null) throw new IllegalArgumentException("No piece at source square: " + from);
-
-        // Turn check (optional; uncomment if enforcing turns)
-        if (activeColor != null && !movingPiece.getColor().equals(activeColor)) {
-            throw new IllegalStateException("It is not " + movingPiece.getColor() + "'s turn");
-        }
-
-        // Validate destination is a pseudo-legal target for this piece
-        Set<String> targets = getLegalMoves(movingPiece);
-        String toAlg = to.toLowerCase();
-        if (!targets.contains(toAlg)) {
-            throw new IllegalArgumentException("Destination " + to + " is not a pseudo-legal target for " + from);
-        }
-
-        boolean isCapture = (getPieceAt(toXY[0], toXY[1]) != null);
-        boolean isPawn = movingPiece instanceof Pawn;
-        boolean isKing = movingPiece instanceof King;
-
-        // Handle en passant capture
-        boolean enPassantCapture = false;
-        if (isPawn && fromXY[0] != toXY[0] && isEmpty(toXY[0], toXY[1])) {
-            // Diagonal move into empty square => en passant
-            enPassantCapture = true;
-            int dir = movingPiece.getColor() == Color.WHITE ? -1 : 1;
-            Piece epPawn = getPieceAt(toXY[0], toXY[1] - dir);
-            if (epPawn == null || !(epPawn instanceof Pawn) || epPawn.getColor() == movingPiece.getColor()) {
-                throw new IllegalStateException("Invalid en passant capture attempted");
-            }
-            pieces.remove(epPawn);
-            isCapture = true;
-        }
-
-        // Handle castling (king moves two squares horizontally)
-        if (isKing && Math.abs(toXY[0] - fromXY[0]) == 2) {
-            King king = (King) movingPiece;
-            int rankY = fromXY[1];
-            if (toXY[0] > fromXY[0]) {
-                // King-side castle: move rook from nearest right rook to f-file (x = fromX+1)
-                Piece rook = findFirstRookOnRay(fromXY[0], rankY, +1, 0, movingPiece.getColor());
-                if (!(rook instanceof Rook)) throw new IllegalStateException("No rook found for king-side castling");
-                int rookToX = fromXY[0] + 1;
-                pieces.remove(rook);
-                rook.setPosition(rookToX, rankY);
-                pieces.add(rook);
-            } else {
-                // Queen-side castle: move rook from nearest left rook to d-file (x = fromX-1)
-                Piece rook = findFirstRookOnRay(fromXY[0], rankY, -1, 0, movingPiece.getColor());
-                if (!(rook instanceof Rook)) throw new IllegalStateException("No rook found for queen-side castling");
-                int rookToX = fromXY[0] - 1;
-                pieces.remove(rook);
-                rook.setPosition(rookToX, rankY);
-                pieces.add(rook);
-            }
-            // King loses castling rights
-            king.setCastleKingSide(false);
-            king.setCastleQueenSide(false);
-            clearEnPassant();
-        } else {
-            // Normal capture if any on destination
-            Piece captured = getPieceAt(toXY[0], toXY[1]);
-            if (captured != null) {
-                pieces.remove(captured);
-            }
-
-            // Update en passant target for next move (only after a two-square pawn push)
-            clearEnPassant();
-            if (isPawn && Math.abs(toXY[1] - fromXY[1]) == 2) {
-                int dir = movingPiece.getColor() == Color.WHITE ? -1 : 1;
-                enPassant[0] = fromXY[0];
-                enPassant[1] = fromXY[1] + dir;
-            }
-        }
-
-        // Move the piece
-        movingPiece.setPosition(toXY[0], toXY[1]);
-
-        // Update halfmove clock
-        if (isPawn || isCapture) {
-            halfmove = 0;
-        } else {
-            halfmove++;
-        }
-
-        // Update castling rights after king/rook move or rook capture
-        updateCastlingRightsAfterMove(movingPiece, fromXY[0], fromXY[1], toXY[0], toXY[1], isCapture);
-
-        nextTurn();
-    }
-
-    // Public API: pseudo-legal targets for a piece (algebraic like "e4")
-    public Set<String> getLegalMoves(Piece p) {
-        if (p == null) return new LinkedHashSet<>();
-        return p.getLegalMoves(this);
-    }
-
     public String toAlg(int x, int y) {
+        if (x < 0 || y < 0) return "-";
         char file = (char) ('a' + x);
         int rank = yMatrix - y;
         return "" + file + rank;
     }
 
     public int[] fromAlg(String alg) {
-        int x = alg.charAt(0) - 'a';
-        int rank = alg.charAt(1) - '0'; // 1..8
-        int y = yMatrix - rank;
-        return new int[]{x, y};
-    }
+        if (alg == null) throw new IllegalArgumentException("Square is null");
+        alg = alg.trim();
+        if (alg.equals("-")) return new int[]{-1, -1};
+        if (alg.length() < 2) throw new IllegalArgumentException("Invalid algebraic square: " + alg);
 
+        char fileCh = Character.toLowerCase(alg.charAt(0));
+        if (fileCh < 'a' || fileCh >= ('a' + xMatrix)) {
+            throw new IllegalArgumentException("File out of range: " + alg);
+        }
+        int file = fileCh - 'a';
+
+        // Support standard chess ranks 1..8 (single digit). If you later support >9 ranks, parse substring(1).
+        char rankCh = alg.charAt(1);
+        if (rankCh < '1' || rankCh > '0' + yMatrix) {
+            throw new IllegalArgumentException("Rank out of range: " + alg);
+        }
+        int rank = rankCh - '0';
+        int y = yMatrix - rank;
+        return new int[]{file, y};
+    }
     // ========== Attack detection and helpers ==========
 
     public boolean isSquareAttacked(Color byColor, int x, int y) {
@@ -208,7 +119,7 @@ public class Board {
         return false;
     }
 
-    private Piece findFirstRookOnRay(int sx, int sy, int dx, int dy, Color color) {
+    public Piece findFirstRookOnRay(int sx, int sy, int dx, int dy, Color color) {
         int x = sx + dx, y = sy + dy;
         while (inBounds(x, y)) {
             Piece at = getPieceAt(x, y);
@@ -221,7 +132,7 @@ public class Board {
         return null;
     }
 
-    private void updateCastlingRightsAfterMove(Piece mover, int fromX, int fromY, int toX, int toY, boolean isCapture) {
+    public void updateCastlingRightsAfterMove(Piece mover, int fromX, int fromY, int toX, int toY, boolean isCapture) {
         // If king moved, clear its rights
         if (mover instanceof King king) {
             king.setCastleKingSide(false);
@@ -265,24 +176,6 @@ public class Board {
         return null;
     }
 
-    private String currentCastlingString() {
-        boolean K = false, Q = false, k = false, q = false;
-        for (Piece p : pieces) {
-            if (p instanceof King king) {
-                boolean isWhite = p.getColor() == Color.WHITE;
-                if (isWhite) {
-                    if (king.canCastleKingSide()) K = true;
-                    if (king.canCastleQueenSide()) Q = true;
-                } else {
-                    if (king.canCastleKingSide()) k = true;
-                    if (king.canCastleQueenSide()) q = true;
-                }
-            }
-        }
-        String s = (K ? "K" : "") + (Q ? "Q" : "") + (k ? "k" : "") + (q ? "q" : "");
-        return s.isEmpty() ? "-" : s;
-    }
-
     @Override
     public String toString() {
         // Use configured dimensions (defaults 8x8)
@@ -293,7 +186,7 @@ public class Board {
             int x = p.getX();
             int y = p.getY();
             if (x >= 0 && x < xMatrix && y >= 0 && y < yMatrix) {
-                grid[y][x] = p.symbol().charAt(0);
+                grid[y][x] = p.getSymbol().charAt(0);
             }
         }
 
@@ -311,7 +204,7 @@ public class Board {
         sb.append("    a b c d e f g h\n\n");
 
         sb.append("Active: ").append(activeColor != null ? activeColor : "unknown").append('\n');
-        sb.append("Castling: ").append(currentCastlingString()).append('\n');
+        sb.append("Castling: ").append(FenAdapter.getCastlingFen(this)).append('\n');
         sb.append("En Passant: ").append(getEnPassantAlgebraic()).append('\n');
         sb.append("Halfmove: ").append(halfmove).append('\n');
         sb.append("Fullmove: ").append(fullmove).append('\n');

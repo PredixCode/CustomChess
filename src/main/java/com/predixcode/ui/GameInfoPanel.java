@@ -74,11 +74,11 @@ public class GameInfoPanel extends VBox {
 
     public void refresh(Board board, List<String> moves) {
         // Stats
-        lblActive.setText(board.getActiveColor() != null ? board.getActiveColor().getName() : "-");
-        lblCastling.setText(board.getCastlingString());
+        lblActive.setText(board.activeColor != null ? board.activeColor.getName() : "-");
+        lblCastling.setText(FenAdapter.getCastlingFen(board));
         lblEnPassant.setText(board.getEnPassantAlgebraic());
-        lblHalfmove.setText(String.valueOf(board.getHalfmove()));
-        lblFullmove.setText(String.valueOf(board.getFullmove()));
+        lblHalfmove.setText(String.valueOf(board.halfmove));
+        lblFullmove.setText(String.valueOf(board.fullmove));
 
         // Moves
         StringBuilder sb = new StringBuilder();

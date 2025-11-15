@@ -7,10 +7,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.predixcode.core.board.Board;
 import com.predixcode.core.board.pieces.Piece;
+import com.predixcode.core.rules.Rule;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
@@ -41,7 +41,7 @@ public class GUI extends Application {
     private static final double PADDING = 24; // space for coordinates
     private static final String THEME = "neo"; // folder under /pieces/
 
-    private Board board;
+    protected Board board;
     private final Rectangle[][] squares = new Rectangle[SIZE][SIZE];
     private final Group highlightLayer = new Group();
     private final Group pieceLayer = new Group();
@@ -62,7 +62,14 @@ public class GUI extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        board = Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        if (this.board == null) {
+            this.board = Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        }
+        
+        for (Rule r : board.rules) {
+            System.out.println("Board has rule: " + r.getClass().getSimpleName());
+        }
+        ensureRules();
 
         final double baseW = PADDING + SIZE * TILE + PADDING;
         final double baseH = PADDING + SIZE * TILE + PADDING;
@@ -90,7 +97,7 @@ public class GUI extends Application {
         center.getChildren().add(content);
 
         // Right panel
-        double panelWidth = 260;
+        double panelWidth = 400;
         infoPanel = new GameInfoPanel(panelWidth);
 
         // Root with right panel
@@ -123,6 +130,18 @@ public class GUI extends Application {
 
         // Initial panel refresh
         infoPanel.refresh(board, moveHistory);
+    }
+
+    private void ensureRules() {
+        if (board.rules == null) {
+            board.rules = new java.util.ArrayList<>();
+        }
+        boolean hasStandard = board.rules.stream()
+            .anyMatch(r -> r instanceof com.predixcode.core.rules.Standard);
+        if (!hasStandard) {
+            System.out.println("[ensureRules] Injecting Standard rule");
+            board.rules.add(new com.predixcode.core.rules.Standard());
+        }
     }
 
     private Pane buildSquares() {
@@ -201,7 +220,7 @@ public class GUI extends Application {
         pieceLayer.getChildren().clear();
         pieceNodes.clear();
 
-        for (Piece p : board.getPieces()) {
+        for (Piece p : board.pieces) {
             ImageView iv = new ImageView(loadImageFor(p));
             iv.setFitWidth(TILE * 0.9);
             iv.setFitHeight(TILE * 0.9);
@@ -228,16 +247,22 @@ public class GUI extends Application {
     }
 
     private void refreshPieces() {
-        // Sync positions and add/remove any nodes if needed
-        // Remove nodes for pieces that no longer exist
-        Set<Piece> current = new HashSet<>(board.getPieces());
-        List<Piece> toRemove = pieceNodes.keySet().stream().filter(p -> !current.contains(p)).collect(Collectors.toList());
+        // Build an identity-based membership of current pieces
+        java.util.IdentityHashMap<Piece, Boolean> currentMap = new java.util.IdentityHashMap<>();
+        for (Piece p : board.pieces) currentMap.put(p, Boolean.TRUE);
+
+        // Remove nodes for pieces that no longer exist (identity-based)
+        java.util.List<Piece> toRemove = new java.util.ArrayList<>();
+        for (Piece p : pieceNodes.keySet()) {
+            if (!currentMap.containsKey(p)) toRemove.add(p);
+        }
         for (Piece p : toRemove) {
             ImageView iv = pieceNodes.remove(p);
             if (iv != null) pieceLayer.getChildren().remove(iv);
         }
-        // Add nodes for new pieces (should not happen often)
-        for (Piece p : current) {
+
+        // Add nodes for new pieces (identity-based)
+        for (Piece p : board.pieces) {
             if (!pieceNodes.containsKey(p)) {
                 ImageView iv = new ImageView(loadImageFor(p));
                 iv.setFitWidth(TILE * 0.9);
@@ -246,7 +271,7 @@ public class GUI extends Application {
                 iv.setSmooth(true);
                 DropShadow ds = new DropShadow();
                 ds.setRadius(8);
-                ds.setColor(javafx.scene.paint.Color.web("#00000040")); // JavaFX Color
+                ds.setColor(javafx.scene.paint.Color.web("#00000040"));
                 iv.setEffect(ds);
                 iv.setOnMouseClicked(e -> {
                     if (e.getButton() == MouseButton.PRIMARY) onSquareClick(p.getX(), p.getY());
@@ -256,16 +281,16 @@ public class GUI extends Application {
                 placeNodeAt(iv, p.getX(), p.getY());
             }
         }
-        // Move nodes to the right coordinates without animation (used on initial load)
-        for (Piece p : current) {
+
+        // Sync positions (identity-based)
+        for (Piece p : board.pieces) {
             ImageView iv = pieceNodes.get(p);
             if (iv != null) placeNodeAt(iv, p.getX(), p.getY());
         }
     }
 
     private Image loadImageFor(Piece p) {
-        String name = p.getColor().getSymbol() + p.symbol().toUpperCase();
-        String path = "/pieces/" + THEME + "/" + name + ".png";
+        String path = p.getImagePath(THEME);
         InputStream resource = getClass().getResourceAsStream(path);
         if (resource == null) {
             System.err.println("Missing piece image: " + path);
@@ -293,7 +318,7 @@ public class GUI extends Application {
             if (p == null) return;
             selected = new int[] { x, y };
             highlightSelection(x, y);
-            legalTargets = board.getLegalMoves(p);
+            legalTargets = p.getLegalMoves(board);
             highlightTargets(legalTargets);
             return;
         }
@@ -304,7 +329,7 @@ public class GUI extends Application {
         if (clicked != null && selPiece != null && sameColor(clicked, selPiece)) {
             selected = new int[] { x, y };
             highlightSelection(x, y);
-            legalTargets = board.getLegalMoves(clicked);
+            legalTargets = clicked.getLegalMoves(board);
             highlightTargets(legalTargets);
             return;
         }
@@ -338,7 +363,6 @@ public class GUI extends Application {
         }
 
         try {
-            // Move the model first; this will handle captures, EP, castling, clocks, etc.
             board.move(fromAlg, toAlg);
             lastFrom = new int[]{fromX, fromY};
             lastTo = new int[]{x, y};
@@ -347,9 +371,9 @@ public class GUI extends Application {
             animateMove(selPiece, fromX, fromY, x, y, capturedNode);
 
             // If we faded a captured node, drop it from the map now
-            if (preCaptured != null && !board.getPieces().contains(preCaptured)) {
+            if (preCaptured != null && !board.pieces.contains(preCaptured)) {
                 pieceNodes.remove(preCaptured);
-            } else if (epCaptured != null && !board.getPieces().contains(epCaptured)) {
+            } else if (epCaptured != null && !board.pieces.contains(epCaptured)) {
                 pieceNodes.remove(epCaptured);
             }
 
@@ -454,6 +478,4 @@ public class GUI extends Application {
     private boolean sameColor(Piece a, Piece b) {
         return a.getColor() != null && b.getColor() != null && a.getColor().getCode() == b.getColor().getCode();
     }
-
-    public static void main(String[] args) { launch(args); }
 }
