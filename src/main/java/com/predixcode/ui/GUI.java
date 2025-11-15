@@ -18,6 +18,8 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.effect.DropShadow;
@@ -54,6 +56,8 @@ public abstract class Gui extends Application {
     private Set<String> legalTargets = new HashSet<>();
     private int[] lastFrom = null, lastTo = null;
 
+    private static final Paint BOARD_LIGHT = Paint.valueOf("#ececd0");
+    private static final Paint BOARD_DARK  = Paint.valueOf("#749552");
     private final Paint selectColor = Paint.valueOf("#F6F66980"); // translucent yellow
     private final Paint lastMoveColor = Paint.valueOf("#f6f6693b");;
     private final Paint targetDotColor = Paint.valueOf("#6161612a");
@@ -114,7 +118,7 @@ public abstract class Gui extends Application {
         stage.show();
 
         // Scale the board content to fit center area
-        javafx.beans.binding.DoubleBinding scale = javafx.beans.binding.Bindings.createDoubleBinding(
+        DoubleBinding scale = Bindings.createDoubleBinding(
             () -> {
                 double w = center.getWidth();
                 double h = center.getHeight();
@@ -148,27 +152,16 @@ public abstract class Gui extends Application {
     private Pane buildSquares() {
         Pane pane = new Pane();
 
-        // Theme-based board background
-        String bgPath = "/pieces/" + THEME + "/board.png";
-        InputStream bgStream = getClass().getResourceAsStream(bgPath);
-        ImageView bg = new ImageView(new Image(bgStream));
-        bg.setFitWidth(board.width * TILE);
-        bg.setFitHeight(board.height * TILE);
-        bg.setPreserveRatio(false); // Fill the board area exactly
-        bg.setSmooth(true);
-        bg.setMouseTransparent(true);
-        pane.getChildren().add(bg); // background at the very bottom
-
-        // Invisible tile rectangles for input handling (and for highlights to layer above)
         for (int y = 0; y < board.height; y++) {
             for (int x = 0; x < board.width; x++) {
                 final int fx = x;
                 final int fy = y;
 
                 Rectangle r = new Rectangle(x * TILE, y * TILE, TILE, TILE);
-                r.setFill(javafx.scene.paint.Color.TRANSPARENT); // board.png provides visuals
+                r.setFill(getSquareBaseFill(x, y));
                 r.setPickOnBounds(true);
                 r.setOnMouseClicked(evt -> onSquareClick(fx, fy));
+
                 squares[y][x] = r;
                 pane.getChildren().add(r);
             }
@@ -177,12 +170,16 @@ public abstract class Gui extends Application {
     }
 
     private void repaintBoard() {
-        // Keep tiles transparent so the themed board.png remains visible
         for (int y = 0; y < board.height; y++) {
             for (int x = 0; x < board.width; x++) {
-                squares[y][x].setFill(javafx.scene.paint.Color.TRANSPARENT);
+                squares[y][x].setFill(getSquareBaseFill(x, y));
             }
         }
+    }
+
+    private Paint getSquareBaseFill(int x, int y) {
+        // Standard orientation: a1 (x=0,y=height-1) is dark => (x+y) odd => dark
+        return ((x + y) % 2 == 0) ? BOARD_LIGHT : BOARD_DARK;
     }
 
     private Pane buildCoordinates() {

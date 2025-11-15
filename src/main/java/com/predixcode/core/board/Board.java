@@ -25,7 +25,7 @@ public class Board {
 
     //  ========= Board initialization ==========
     public static Board fromFen(String fen) {
-        return FenAdapter.setupBoard(fen);
+        return FenAdapter.boardFromFen(fen);
     }
 
     public void setPieces(List<Piece> pieces) { this.pieces = pieces != null ? pieces : new ArrayList<>(); }
@@ -204,7 +204,7 @@ public class Board {
         sb.append("    a b c d e f g h\n\n");
 
         sb.append("Active: ").append(activeColor != null ? activeColor : "unknown").append('\n');
-        sb.append("Castling: ").append(FenAdapter.getCastlingFen(this)).append('\n');
+        sb.append("Castling: ").append(FenAdapter.getCastlingString(this)).append('\n');
         sb.append("En Passant: ").append(getEnPassantAlgebraic()).append('\n');
         sb.append("Halfmove: ").append(halfmove).append('\n');
         sb.append("Fullmove: ").append(fullmove).append('\n');

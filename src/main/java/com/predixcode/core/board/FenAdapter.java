@@ -11,12 +11,13 @@ import com.predixcode.core.colors.Color;
 public final class FenAdapter {
     private FenAdapter() {}
 
-    public static Board setupBoard(String fen) {
+    public static Board boardFromFen(String fen) {
         String[] parts = fen.trim().split("\\s+");
+        System.out.println("FEN parts: " + Arrays.toString(parts));
         if (parts.length < 6) throw new IllegalArgumentException("Invalid FEN: " + fen);
 
         String placement = parts[0];
-        char active = parts[1].charAt(0);        // 'w' or 'b'
+        char active = parts[1].trim().charAt(0);        // 'w' or 'b'
         String castling = parts[2];              // "KQkq" or "-"
         String epStr = parts[3];                 // "-" or like "e3"
         int halfmove = Integer.parseInt(parts[4]);
@@ -44,68 +45,9 @@ public final class FenAdapter {
             board.clearEnPassant();
         }
 
-        // castling rights go straight to the kings
+        // castling rights
         applyCastlingToKings(pieces, castling);
-
         return board;
-    }
-
-    private static List<Piece> buildPieces(List<String> rows) {
-        List<Piece> pieces = new ArrayList<>();
-        for (int y = 0; y < rows.size(); y++) {
-            String row = rows.get(y);
-            int x = 0;
-            for (int i = 0; i < row.length(); i++) {
-                char ch = row.charAt(i);
-                if (Character.isDigit(ch)) {
-                    x += Character.getNumericValue(ch);
-                } else {
-                    Piece piece = Piece.initFromFen(ch, x, y);
-                    if (piece != null) pieces.add(piece);
-                    x++;
-                }
-            }
-        }
-        return pieces;
-    }
-
-    public static String getCastlingFen(Board board) {
-        boolean K = false, Q = false, k = false, q = false;
-        for (Piece p : board.pieces) {
-            if (p instanceof King king) {
-                boolean isWhite = p.getColor() == Color.WHITE;
-                if (isWhite) {
-                    if (king.canCastleKingSide()) K = true;
-                    if (king.canCastleQueenSide()) Q = true;
-                } else {
-                    if (king.canCastleKingSide()) k = true;
-                    if (king.canCastleQueenSide()) q = true;
-                }
-            }
-        }
-        String s = (K ? "K" : "") + (Q ? "Q" : "") + (k ? "k" : "") + (q ? "q" : "");
-        return s.isEmpty() ? "-" : s;
-    }
-
-    public static void applyCastlingToKings(List<Piece> pieces, String castling) {
-        King whiteKing = null;
-        King blackKing = null;
-
-        for (Piece p : pieces) {
-            if (p instanceof King k) {
-                boolean isWhite = p.getColor() != null && p.getColor().getCode() == 1;
-                if (isWhite) whiteKing = k; else blackKing = k;
-            }
-        }
-
-        if (whiteKing != null) {
-            whiteKing.setCastleKingSide(castling.contains("K"));
-            whiteKing.setCastleQueenSide(castling.contains("Q"));
-        }
-        if (blackKing != null) {
-            blackKing.setCastleKingSide(castling.contains("k"));
-            blackKing.setCastleQueenSide(castling.contains("q"));
-        }
     }
 
     public static String toFen(Board board) {
@@ -132,9 +74,67 @@ public final class FenAdapter {
         String side = (board.activeColor == Color.WHITE) ? "w" :
                       (board.activeColor == Color.BLACK) ? "b" : "w";
 
-        String castling = FenAdapter.getCastlingFen(board);
+        String castling = FenAdapter.getCastlingString(board);
         String ep = board.getEnPassantAlgebraic();
 
         return placement + " " + side + " " + castling + " " + ep + " " + board.halfmove + " " + board.fullmove;
+    }
+
+    public static String getCastlingString(Board board) {
+        boolean K = false, Q = false, k = false, q = false;
+        for (Piece p : board.pieces) {
+            if (p instanceof King king) {
+                boolean isWhite = p.getColor() == Color.WHITE;
+                if (isWhite) {
+                    if (king.canCastleKingSide()) K = true;
+                    if (king.canCastleQueenSide()) Q = true;
+                } else {
+                    if (king.canCastleKingSide()) k = true;
+                    if (king.canCastleQueenSide()) q = true;
+                }
+            }
+        }
+        String s = (K ? "K" : "") + (Q ? "Q" : "") + (k ? "k" : "") + (q ? "q" : "");
+        return s.isEmpty() ? "-" : s;
+    }
+
+    private static List<Piece> buildPieces(List<String> rows) {
+        List<Piece> pieces = new ArrayList<>();
+        for (int y = 0; y < rows.size(); y++) {
+            String row = rows.get(y);
+            int x = 0;
+            for (int i = 0; i < row.length(); i++) {
+                char ch = row.charAt(i);
+                if (Character.isDigit(ch)) {
+                    x += Character.getNumericValue(ch);
+                } else {
+                    Piece piece = Piece.initFromFen(ch, x, y);
+                    if (piece != null) pieces.add(piece);
+                    x++;
+                }
+            }
+        }
+        return pieces;
+    }
+
+    private static void applyCastlingToKings(List<Piece> pieces, String castling) {
+        King whiteKing = null;
+        King blackKing = null;
+
+        for (Piece p : pieces) {
+            if (p instanceof King k) {
+                boolean isWhite = p.getColor() != null && p.getColor().getCode() == 1;
+                if (isWhite) whiteKing = k; else blackKing = k;
+            }
+        }
+
+        if (whiteKing != null) {
+            whiteKing.setCastleKingSide(castling.contains("K"));
+            whiteKing.setCastleQueenSide(castling.contains("Q"));
+        }
+        if (blackKing != null) {
+            blackKing.setCastleKingSide(castling.contains("k"));
+            blackKing.setCastleQueenSide(castling.contains("q"));
+        }
     }
 }
