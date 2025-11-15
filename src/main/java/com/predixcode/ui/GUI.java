@@ -34,7 +34,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-public abstract class GUI extends Application {
+public abstract class Gui extends Application {
 
     private static final int SIZE = 8;
     private static final double TILE = 88; // tile size in px

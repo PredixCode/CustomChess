@@ -1,12 +1,12 @@
 package com.predixcode.scenarios;
 
 import com.predixcode.core.board.Board;
-import com.predixcode.ui.GUI;
+import com.predixcode.ui.Gui;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
 
-public class Bureaucrat extends GUI implements Scenario { 
+public class Bureaucrat extends Gui implements Scenario { 
 
     public static void main(String[] args) {
         Application.launch(Bureaucrat.class, args);
