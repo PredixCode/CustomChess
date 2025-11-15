@@ -3,7 +3,7 @@ package com.predixcode.core.rules;
 import com.predixcode.core.board.Board;
 import com.predixcode.core.board.pieces.Piece;
 
-public class BureaucratRule extends Standard {
+public class BureaucratRule extends StandardRule {
 
     @Override
     public void apply(Board  board, Piece movingPiece, String from, String to) {

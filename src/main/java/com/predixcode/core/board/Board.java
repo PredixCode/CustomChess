@@ -11,8 +11,8 @@ import com.predixcode.core.colors.Color;
 import com.predixcode.core.rules.Rule;
 
 public class Board {
-    public int xMatrix = 8;
-    public int yMatrix = 8;
+    public int width;
+    public int height;
 
     public int halfmove;
     public int fullmove;
@@ -62,7 +62,7 @@ public class Board {
     }
 
     public boolean inBounds(int x, int y) {
-        return x >= 0 && x < xMatrix && y >= 0 && y < yMatrix;
+        return x >= 0 && x < width && y >= 0 && y < height;
     }
 
     public boolean isEmpty(int x, int y) {
@@ -81,7 +81,7 @@ public class Board {
     public String toAlg(int x, int y) {
         if (x < 0 || y < 0) return "-";
         char file = (char) ('a' + x);
-        int rank = yMatrix - y;
+        int rank = height - y;
         return "" + file + rank;
     }
 
@@ -92,18 +92,18 @@ public class Board {
         if (alg.length() < 2) throw new IllegalArgumentException("Invalid algebraic square: " + alg);
 
         char fileCh = Character.toLowerCase(alg.charAt(0));
-        if (fileCh < 'a' || fileCh >= ('a' + xMatrix)) {
+        if (fileCh < 'a' || fileCh >= ('a' + width)) {
             throw new IllegalArgumentException("File out of range: " + alg);
         }
         int file = fileCh - 'a';
 
         // Support standard chess ranks 1..8 (single digit). If you later support >9 ranks, parse substring(1).
         char rankCh = alg.charAt(1);
-        if (rankCh < '1' || rankCh > '0' + yMatrix) {
+        if (rankCh < '1' || rankCh > '0' + height) {
             throw new IllegalArgumentException("Rank out of range: " + alg);
         }
         int rank = rankCh - '0';
-        int y = yMatrix - rank;
+        int y = height - rank;
         return new int[]{file, y};
     }
     // ========== Attack detection and helpers ==========
@@ -179,23 +179,23 @@ public class Board {
     @Override
     public String toString() {
         // Use configured dimensions (defaults 8x8)
-        char[][] grid = new char[yMatrix][xMatrix];
-        for (int r = 0; r < yMatrix; r++) Arrays.fill(grid[r], '.');
+        char[][] grid = new char[height][width];
+        for (int r = 0; r < height; r++) Arrays.fill(grid[r], '.');
 
         for (Piece p : pieces) {
             int x = p.getX();
             int y = p.getY();
-            if (x >= 0 && x < xMatrix && y >= 0 && y < yMatrix) {
+            if (x >= 0 && x < width && y >= 0 && y < height) {
                 grid[y][x] = p.getSymbol().charAt(0);
             }
         }
 
         StringBuilder sb = new StringBuilder();
         sb.append("  +-----------------+\n");
-        for (int row = 0; row < yMatrix; row++) {
-            int rank = yMatrix - row;
+        for (int row = 0; row < height; row++) {
+            int rank = height - row;
             sb.append(rank).append(" | ");
-            for (int col = 0; col < xMatrix; col++) {
+            for (int col = 0; col < width; col++) {
                 sb.append(grid[row][col]).append(' ');
             }
             sb.append("|\n");

@@ -11,6 +11,7 @@ import java.util.Set;
 import com.predixcode.core.board.Board;
 import com.predixcode.core.board.pieces.Piece;
 import com.predixcode.core.rules.Rule;
+import com.predixcode.core.rules.StandardRule;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
@@ -26,6 +27,7 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -36,14 +38,12 @@ import javafx.util.Duration;
 
 public abstract class Gui extends Application {
 
-    private static final int SIZE = 8;
     private static final double TILE = 88; // tile size in px
     private static final double PADDING = 24; // space for coordinates
     private static final String THEME = "neo/upscale"; // folder under /pieces/
 
-
     protected Board board;
-    private final Rectangle[][] squares = new Rectangle[SIZE][SIZE];
+    private Rectangle[][] squares;
     private final Group highlightLayer = new Group();
     private final Group pieceLayer = new Group();
     private final Group overlayLayer = new Group();
@@ -72,12 +72,12 @@ public abstract class Gui extends Application {
         }
         ensureRules();
 
-        final double baseW = PADDING + SIZE * TILE + PADDING;
-        final double baseH = PADDING + SIZE * TILE + PADDING;
+        this.squares = new Rectangle[board.height][board.width];
+        final double baseW = PADDING + board.width * TILE + PADDING;
+        final double baseH = PADDING + board.height * TILE + PADDING;
 
         // Center area: scalable board content
-        javafx.scene.layout.StackPane center = new javafx.scene.layout.StackPane();
-
+        StackPane center = new StackPane();
         Group content = new Group();
 
         Group boardGroup = new Group();
@@ -108,7 +108,7 @@ public abstract class Gui extends Application {
 
         // Scene with extra width for the panel
         Scene scene = new Scene(root, baseW + panelWidth, baseH);
-        stage.setTitle("Predix Chess • JavaFX");
+        stage.setTitle("Custom Chess");
         stage.setScene(scene);
         stage.setResizable(true);
         stage.show();
@@ -138,10 +138,10 @@ public abstract class Gui extends Application {
             board.rules = new java.util.ArrayList<>();
         }
         boolean hasStandard = board.rules.stream()
-            .anyMatch(r -> r instanceof com.predixcode.core.rules.Standard);
+            .anyMatch(r -> r instanceof StandardRule);
         if (!hasStandard) {
             System.out.println("[ensureRules] Injecting Standard rule");
-            board.rules.add(new com.predixcode.core.rules.Standard());
+            board.rules.add(new StandardRule());
         }
     }
 
@@ -152,16 +152,16 @@ public abstract class Gui extends Application {
         String bgPath = "/pieces/" + THEME + "/board.png";
         InputStream bgStream = getClass().getResourceAsStream(bgPath);
         ImageView bg = new ImageView(new Image(bgStream));
-        bg.setFitWidth(SIZE * TILE);
-        bg.setFitHeight(SIZE * TILE);
+        bg.setFitWidth(board.width * TILE);
+        bg.setFitHeight(board.height * TILE);
         bg.setPreserveRatio(false); // Fill the board area exactly
         bg.setSmooth(true);
         bg.setMouseTransparent(true);
         pane.getChildren().add(bg); // background at the very bottom
 
         // Invisible tile rectangles for input handling (and for highlights to layer above)
-        for (int y = 0; y < SIZE; y++) {
-            for (int x = 0; x < SIZE; x++) {
+        for (int y = 0; y < board.height; y++) {
+            for (int x = 0; x < board.width; x++) {
                 final int fx = x;
                 final int fy = y;
 
@@ -178,8 +178,8 @@ public abstract class Gui extends Application {
 
     private void repaintBoard() {
         // Keep tiles transparent so the themed board.png remains visible
-        for (int y = 0; y < SIZE; y++) {
-            for (int x = 0; x < SIZE; x++) {
+        for (int y = 0; y < board.height; y++) {
+            for (int x = 0; x < board.width; x++) {
                 squares[y][x].setFill(javafx.scene.paint.Color.TRANSPARENT);
             }
         }
@@ -188,20 +188,20 @@ public abstract class Gui extends Application {
     private Pane buildCoordinates() {
         Pane coords = new Pane();
         coords.setMouseTransparent(true);
-        coords.setPrefSize(PADDING + SIZE * TILE + PADDING, PADDING + SIZE * TILE + PADDING);
+        coords.setPrefSize(PADDING + board.width * TILE + PADDING, PADDING + board.height * TILE + PADDING);
 
         // Files a-h (bottom)
-        for (int x = 0; x < SIZE; x++) {
+        for (int x = 0; x < board.width; x++) {
             char file = (char) ('a' + x);
             Text t = text(String.valueOf(file), 12);
             t.setX(PADDING + x * TILE + TILE - 14);
-            t.setY(PADDING + SIZE * TILE + 16);
+            t.setY(PADDING + board.height * TILE + 16);
             t.setFill(Paint.valueOf("#333"));
             coords.getChildren().add(t);
         }
         // Ranks 8-1 (left)
-        for (int y = 0; y < SIZE; y++) {
-            int rank = SIZE - y;
+        for (int y = 0; y < board.height; y++) {
+            int rank = board.height - y;
             Text t = text(String.valueOf(rank), 12);
             t.setX(6);
             t.setY(PADDING + y * TILE + 16);

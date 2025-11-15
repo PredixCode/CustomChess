@@ -26,8 +26,8 @@ public final class FenAdapter {
 
         // dimensions
         List<String> rows = Arrays.asList(placement.split("/"));
-        board.xMatrix = rows.getFirst().length();
-        board.yMatrix = rows.size();
+        board.width = rows.getFirst().length();
+        board.height = rows.size();
 
         // pieces
         List<Piece> pieces = buildPieces(rows);
@@ -110,9 +110,9 @@ public final class FenAdapter {
 
     public static String toFen(Board board) {
         StringBuilder placement = new StringBuilder();
-        for (int row = 0; row < board.yMatrix; row++) {
+        for (int row = 0; row < board.height; row++) {
             int empty = 0;
-            for (int col = 0; col < board.xMatrix; col++) {
+            for (int col = 0; col < board.width; col++) {
                 Piece piece = board.getPieceAt(col, row);
                 if (piece == null) {
                     empty++;
@@ -126,7 +126,7 @@ public final class FenAdapter {
                 }
             }
             if (empty > 0) placement.append(empty);
-            if (row < board.yMatrix - 1) placement.append('/');
+            if (row < board.height - 1) placement.append('/');
         }
 
         String side = (board.activeColor == Color.WHITE) ? "w" :
