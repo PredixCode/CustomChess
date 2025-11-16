@@ -17,6 +17,6 @@ public class App {
     );
 
     public static void main(String[] args) {
-        Application.launch(SCENARIOS.get(1), args);
+        Application.launch(SCENARIOS.get(3), args);
     }
 }

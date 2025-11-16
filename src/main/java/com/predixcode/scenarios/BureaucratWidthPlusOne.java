@@ -6,8 +6,7 @@ public class BureaucratWidthPlusOne extends Bureaucrat {
 
     @Override
     public Board createBoard() {
-        Board b = Board.fromFen("rnbqckbnr/ppppppppp/9/9/9/9/PPPPPPPPP/RNBQCKBNR w KQkq - 0 1");
-        return b;
+        return Board.fromFen("rnbqckbnr/ppppppppp/9/9/9/9/PPPPPPPPP/RNBQCKBNR w KQkq - 0 1");
     }
 
 }

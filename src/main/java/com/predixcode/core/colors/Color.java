@@ -34,6 +34,6 @@ public abstract class Color {
         if (Color == null || getClass() != Color.getClass()) return false;
         Color other = (Color) Color;
 
-        return this.colorCode == other.colorCode || (this.colorName.equals(other.colorName) && this.colorCode == other.colorCode);
+        return this.colorCode == other.colorCode || (this.colorName.equals(other.colorName) && this.colorSymbol == other.colorSymbol);
     }
 }

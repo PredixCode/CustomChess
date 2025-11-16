@@ -37,14 +37,14 @@ public class Queen extends Piece {
     }
 
     private void addRay(Board board, Set<String> out, int dx, int dy) {
-        int nx = this.x + dx;
-        int ny = this.y + dy;
+        int nx = this.posX + dx;
+        int ny = this.posY + dy;
         while (board.inBounds(nx, ny)) {
             var at = board.getPieceAt(nx, ny);
             if (at == null) {
                 out.add(board.toAlg(nx, ny));
             } else {
-                if (at.getColor() != this.color) {
+                if (!at.getColor().equals(this.color)) {
                     out.add(board.toAlg(nx, ny));
                 }
                 break;
@@ -54,8 +54,8 @@ public class Queen extends Piece {
     }
 
     private void addAttackRay(Board board, Set<int[]> out, int dx, int dy) {
-        int nx = this.x + dx;
-        int ny = this.y + dy;
+        int nx = this.posX + dx;
+        int ny = this.posY + dy;
         while (board.inBounds(nx, ny)) {
             out.add(new int[]{nx, ny});
             if (board.getPieceAt(nx, ny) != null) break; // stop at first piece

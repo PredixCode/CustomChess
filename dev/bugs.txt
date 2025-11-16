@@ -1,0 +1,1 @@
+Bureacreat respawns at first available field

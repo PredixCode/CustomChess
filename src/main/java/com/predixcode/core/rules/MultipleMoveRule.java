@@ -11,7 +11,7 @@ import com.predixcode.core.board.pieces.Piece;
 public class MultipleMoveRule extends StandardRule {
 
     // Tracks how many moves remain for the current active side
-    private Integer movesPerSide;
+    private final Integer movesPerSide;
     private Integer movesLeftForActive = null; // null => initialize on first use
 
     public MultipleMoveRule(int movesPerSide) {
@@ -42,6 +42,5 @@ public class MultipleMoveRule extends StandardRule {
             switchPlayer(board);
             movesLeftForActive = movesPerSide;
         }
-        // else: keep the same activeColor for the second move; do not switch or bump fullmove
     }
 }

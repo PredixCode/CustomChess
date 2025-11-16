@@ -101,7 +101,7 @@ public class Board {
 
     public Piece getPieceAt(int x, int y) {
         for (Piece p : pieces) {
-            if (p.x == x && p.y == y) return p;
+            if (p.posX == x && p.posY == y) return p;
         }
         return null;
     }
@@ -199,7 +199,7 @@ public class Board {
         }
 
         // Reselect if clicking same-color piece
-        if (clicked != null && clicked.getColor() == selPiece.getColor()) {
+        if (clicked != null && clicked.getColor().equals(selPiece.getColor())) {
             selectedSquare = new int[] { x, y };
             cachedLegalTargets = computeUiLegalTargets(clicked);
             return ClickOutcome.selection(new int[] { x, y }, cachedLegalTargets);
@@ -233,7 +233,7 @@ public class Board {
 
     public boolean isSquareAttacked(Color byColor, int x, int y) {
         for (Piece p : pieces) {
-            if (p.getColor() == byColor) {
+            if (p.getColor().equals(byColor)) {
                 for (int[] sq : p.attackedSquares(this)) {
                     if (sq[0] == x && sq[1] == y) return true;
                 }
@@ -247,7 +247,7 @@ public class Board {
         while (inBounds(x, y)) {
             Piece at = getPieceAt(x, y);
             if (at != null) {
-                if (at instanceof Rook && at.getColor() == color) return at;
+                if (at instanceof Rook && at.getColor().equals(color)) return at;
                 return null;
             }
             x += dx; y += dy;
@@ -264,13 +264,13 @@ public class Board {
 
         // If rook moved from initial squares, clear that side for that color
         if (mover instanceof Rook) {
-            if (mover.getColor() == Color.WHITE) {
+            if (mover.getColor().equals(Color.WHITE)) {
                 King wk = getKing(Color.WHITE);
                 if (wk != null) {
                     if (fromX == 0 && fromY == 7) wk.setCastleQueenSide(false); // a1 rook moved
                     if (fromX == 7 && fromY == 7) wk.setCastleKingSide(false);  // h1 rook moved (FIXED)
                 }
-            } else if (mover.getColor() == Color.BLACK) {
+            } else if (mover.getColor().equals(Color.BLACK)) {
                 King bk = getKing(Color.BLACK);
                 if (bk != null) {
                     if (fromX == 0 && fromY == 0) bk.setCastleQueenSide(false); // a8 rook moved
@@ -292,7 +292,9 @@ public class Board {
 
     public King getKing(Color color) {
         for (Piece p : pieces) {
-            if (p instanceof King && p.getColor() == color) return (King) p;
+            if (p instanceof King && p.getColor() != null && p.getColor().equals(color)) {
+                return (King) p;
+            }
         }
         return null;
     }
@@ -315,7 +317,7 @@ public class Board {
 
     public boolean hasAnyLegalMove(Color color) {
         for (Piece p : pieces) {
-            if (p.getColor() != color) continue;
+            if (p.getColor() == null || color == null || !p.getColor().equals(color)) continue;
             Set<String> moves = p.getLegalMoves(this);
             if (moves == null || moves.isEmpty()) continue;
 
@@ -331,8 +333,8 @@ public class Board {
 
     public boolean wouldLeaveOwnKingInCheck(Piece movingPiece, int[] fromXY, int[] toXY) {
         // Save state needed to revert
-        int oldX = movingPiece.x;
-        int oldY = movingPiece.y;
+        int oldX = movingPiece.posX;
+        int oldY = movingPiece.posY;
 
         Piece captured = null;
         boolean epCapture = false;
@@ -343,7 +345,7 @@ public class Board {
                 && fromXY[0] != toXY[0]
                 && isEmpty(toXY[0], toXY[1])) {
             Piece epPawn = getPieceAt(toXY[0], toXY[1] - dir);
-            if (epPawn != null && epPawn instanceof Pawn && epPawn.getColor() != movingPiece.getColor()) {
+            if (epPawn != null && epPawn instanceof Pawn && !epPawn.getColor().equals(movingPiece.getColor())) {
                 captured = epPawn;
                 epCapture = true;
                 pieces.remove(captured);
@@ -365,7 +367,7 @@ public class Board {
                 Piece rook = findFirstRookOnRay(fromXY[0], rankY, +1, 0, movingPiece.getColor());
                 if (rook instanceof Rook) {
                     rookMoved = rook;
-                    rookOldX = rook.x; rookOldY = rook.y;
+                    rookOldX = rook.posX; rookOldY = rook.posY;
                     rook.setPosition(fromXY[0] + 1, rankY);
                 }
             } else {
@@ -373,7 +375,7 @@ public class Board {
                 Piece rook = findFirstRookOnRay(fromXY[0], rankY, -1, 0, movingPiece.getColor());
                 if (rook instanceof Rook) {
                     rookMoved = rook;
-                    rookOldX = rook.x; rookOldY = rook.y;
+                    rookOldX = rook.posX; rookOldY = rook.posY;
                     rook.setPosition(fromXY[0] - 1, rankY);
                 }
             }
@@ -412,7 +414,7 @@ public class Board {
         if (fromXY[0] != toXY[0] && isEmpty(toXY[0], toXY[1])) {
             int dir = forwardDir(movingPiece.getColor());
             Piece epPawn = getPieceAt(toXY[0], toXY[1] - dir);
-            if (epPawn == null || !(epPawn instanceof Pawn) || epPawn.getColor() == movingPiece.getColor()) {
+            if (epPawn == null || !(epPawn instanceof Pawn) || epPawn.getColor().equals(movingPiece.getColor())) {
                 throw new IllegalStateException("Invalid en passant capture attempted");
             }
             lastCapturedPiece = epPawn;
@@ -491,7 +493,7 @@ public class Board {
      * WHITE moves "up" (-1), BLACK moves "down" (+1).
      */
     public int forwardDir(Color color) {
-        return (color == Color.WHITE) ? -1 : 1;
+        return (color != null && color.equals(Color.WHITE)) ? -1 : 1;
     }
 
     @Override
@@ -501,8 +503,8 @@ public class Board {
         for (int r = 0; r < height; r++) Arrays.fill(grid[r], '.');
 
         for (Piece p : pieces) {
-            int x = p.x;
-            int y = p.y;
+            int x = p.posX;
+            int y = p.posY;
             if (x >= 0 && x < width && y >= 0 && y < height) {
                 grid[y][x] = p.getSymbol().charAt(0);
             }

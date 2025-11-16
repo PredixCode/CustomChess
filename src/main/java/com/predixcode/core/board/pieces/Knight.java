@@ -20,11 +20,11 @@ public class Knight extends Piece {
             {-1, -2}, {-2, -1}, {-2,  1}, {-1,  2}
         };
         for (int[] d : deltas) {
-            int tx = this.x + d[0];
-            int ty = this.y + d[1];
+            int tx = this.posX + d[0];
+            int ty = this.posY + d[1];
             if (!board.inBounds(tx, ty)) continue;
             var at = board.getPieceAt(tx, ty);
-            if (at == null || at.getColor() != this.color) {
+            if (at == null || !at.getColor().equals(this.color)) {
                 out.add(board.toAlg(tx, ty));
             }
         }
@@ -39,8 +39,8 @@ public class Knight extends Piece {
             {-1, -2}, {-2, -1}, {-2,  1}, {-1,  2}
         };
         for (int[] d : deltas) {
-            int tx = this.x + d[0];
-            int ty = this.y + d[1];
+            int tx = this.posX + d[0];
+            int ty = this.posY + d[1];
             if (board.inBounds(tx, ty)) out.add(new int[]{tx, ty});
         }
         return out;

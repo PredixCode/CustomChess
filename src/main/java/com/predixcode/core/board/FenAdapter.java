@@ -84,7 +84,7 @@ public final class FenAdapter {
         boolean K = false, Q = false, k = false, q = false;
         for (Piece p : board.getPieces()) {
             if (p instanceof King king) {
-                boolean isWhite = p.getColor() == Color.WHITE;
+                boolean isWhite = p.getColor().equals(Color.WHITE);
                 if (isWhite) {
                     if (king.canCastleKingSide()) K = true;
                     if (king.canCastleQueenSide()) Q = true;
@@ -128,7 +128,7 @@ public final class FenAdapter {
 
         for (Piece p : pieces) {
             if (p instanceof King k) {
-                boolean isWhite = p.getColor() != null && p.getColor().getCode() == 1;
+                boolean isWhite = p.getColor() != null && p.getColor().equals(Color.WHITE);
                 if (isWhite) whiteKing = k; else blackKing = k;
             }
         }

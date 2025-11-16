@@ -8,8 +8,8 @@ import com.predixcode.core.board.Board;
 import com.predixcode.core.colors.Color;
 
 public abstract class Piece {
-    public int x;
-    public int y;
+    public int posX;
+    public int posY;
     protected Color color;
     protected String fenSymbol;
 
@@ -23,8 +23,8 @@ public abstract class Piece {
     public abstract Set<int[]> attackedSquares(Board board);      // int[]{x,y}
     public void actionOnCapture(Board board) {}
 
-    public void setPosition(int x, int y) { this.x = x; this.y = y; }
-    public int[] getXY () { return new int[] { this.x, this.y }; }
+    public void setPosition(int x, int y) { this.posX = x; this.posY = y; }
+    public int[] getXY () { return new int[] { this.posX, this.posY }; }
 
     public void setColor(Color color) { this.color = color; }
     public Color getColor() { return this.color; }

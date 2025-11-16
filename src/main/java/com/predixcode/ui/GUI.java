@@ -169,24 +169,25 @@ public abstract class Gui extends Application {
                 lastFrom = out.from;
                 lastTo   = out.to;
 
-                // Animate the moved piece (look up after model changed)
                 Piece moved = board.getPieceAt(lastTo[0], lastTo[1]);
-                ImageView capturedNode = (out.captured != null) ? pieceNodes.get(out.captured) : null;
+
+                boolean capturedStillExists = (out.captured != null) && board.getPieces().contains(out.captured);
+                ImageView capturedNode = (!capturedStillExists && out.captured != null)
+                    ? pieceNodes.get(out.captured)
+                    : null;
 
                 animateMove(moved, lastFrom[0], lastFrom[1], lastTo[0], lastTo[1], capturedNode);
 
-                // Remove captured node mapping (if any)
-                if (out.captured != null && !board.getPieces().contains(out.captured)) {
+                // Only remove mapping when the captured piece is actually gone
+                if (out.captured != null && !capturedStillExists) {
                     ImageView removed = pieceNodes.remove(out.captured);
                     if (removed != null) pieceLayer.getChildren().remove(removed);
                 }
 
-                // Record move and refresh side panel
+                // Record + UI
                 String ply = board.toAlg(lastFrom[0], lastFrom[1]) + "-" + board.toAlg(lastTo[0], lastTo[1]);
                 moveHistory.add(ply);
                 infoPanel.refresh(board, moveHistory);
-
-                // Shade last move
                 highlightLastMove(lastFrom, lastTo);
             }
 
@@ -278,13 +279,13 @@ public abstract class Gui extends Application {
             ds.setColor(javafx.scene.paint.Color.web("#00000040")); // JavaFX Color
             iv.setEffect(ds);
 
-            int x = p.x;
-            int y = p.y;
+            int x = p.posX;
+            int y = p.posY;
             placeNodeAt(iv, x, y);
 
             iv.setOnMouseClicked(e -> {
                 if (e.getButton() == MouseButton.PRIMARY) {
-                    onSquareClick(p.x, p.y);
+                    onSquareClick(p.posX, p.posY);
                 }
             });
             pieceNodes.put(p, iv);
@@ -310,6 +311,7 @@ public abstract class Gui extends Application {
         for (Piece p : board.getPieces()) {
             if (!pieceNodes.containsKey(p)) {
                 ImageView iv = new ImageView(loadImageFor(p));
+                iv.getProperties().put("imgKey", p.getImagePath(THEME));
                 iv.setFitWidth(TILE * 0.9);
                 iv.setFitHeight(TILE * 0.9);
                 iv.setPreserveRatio(true);
@@ -319,17 +321,23 @@ public abstract class Gui extends Application {
                 ds.setColor(Color.web("#00000040"));
                 iv.setEffect(ds);
                 iv.setOnMouseClicked(e -> {
-                    if (e.getButton() == MouseButton.PRIMARY) onSquareClick(p.x, p.y);
+                    if (e.getButton() == MouseButton.PRIMARY) onSquareClick(p.posX, p.posY);
                 });
                 pieceNodes.put(p, iv);
                 pieceLayer.getChildren().add(iv);
-                placeNodeAt(iv, p.x, p.y);
+                placeNodeAt(iv, p.posX, p.posY);
             }
         }
         // Sync positions (identity-based)
         for (Piece p : board.getPieces()) {
             ImageView iv = pieceNodes.get(p);
-            if (iv != null) placeNodeAt(iv, p.x, p.y);
+            if (iv != null) {
+                ensureSpriteUpToDate(p, iv);           // <- refresh sprite if color/type changed
+                placeNodeAt(iv, p.posX, p.posY);       // or p.getXY()[0/1] if you use getters
+                if (!pieceLayer.getChildren().contains(iv)) {
+                    pieceLayer.getChildren().add(iv);  // <- ensure visible if it was removed
+                }
+            }
         }
     }
 
@@ -352,6 +360,15 @@ public abstract class Gui extends Application {
             }
         }
         return img;
+    }
+
+    private void ensureSpriteUpToDate(Piece p, ImageView iv) {
+        String wanted = p.getImagePath(THEME); // depends on current color+symbol
+        Object cur = iv.getProperties().get("imgKey");
+        if (cur == null || !wanted.equals(cur)) {
+            iv.setImage(loadImageFor(p));
+            iv.getProperties().put("imgKey", wanted);
+        }
     }
 
     private void animateMove(Piece p, int fromX, int fromY, int toX, int toY, ImageView capturedNode) {

@@ -10,14 +10,14 @@ public class Standard extends Gui implements Scenario {
     
     @Override
     public void start(Stage stage) throws Exception {
-        this.board = createBoard();
+        Board b = createBoard();
+        this.board = addRules(b);
         super.start(stage);
     }
 
     @Override
     public Board createBoard() {
-        Board b = Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        return addRules(b);
+        return Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
     @Override
