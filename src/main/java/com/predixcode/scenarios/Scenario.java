@@ -9,4 +9,6 @@ public interface Scenario {
     void start(Stage stage) throws Exception;
 
     Board createBoard();
+
+    Board addRules(Board board);
 }

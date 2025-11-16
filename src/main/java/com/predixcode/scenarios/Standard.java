@@ -4,14 +4,9 @@ import com.predixcode.core.board.Board;
 import com.predixcode.core.rules.StandardRule;
 import com.predixcode.ui.Gui;
 
-import javafx.application.Application;
 import javafx.stage.Stage;
 
-public class Standard extends Gui implements Scenario { 
-
-    public static void main(String[] args) {
-        Application.launch(Standard.class, args);
-    }
+public class Standard extends Gui implements Scenario {
     
     @Override
     public void start(Stage stage) throws Exception {
@@ -22,8 +17,12 @@ public class Standard extends Gui implements Scenario {
     @Override
     public Board createBoard() {
         Board b = Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        b.rules.add(new StandardRule());
-        return b;
+        return addRules(b);
     }
 
+    @Override
+    public Board addRules(Board b) {
+        b.addRule(new StandardRule());
+        return b;
+    }
 }

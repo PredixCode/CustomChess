@@ -27,17 +27,17 @@ public final class FenAdapter {
 
         // dimensions
         List<String> rows = Arrays.asList(placement.split("/"));
-        board.width = rows.getFirst().length();
-        board.height = rows.size(); 
+        board.setWidth(rows.getFirst().length());
+        board.setHeight(rows.size()); 
 
         // pieces
         List<Piece> pieces = buildPieces(rows);
         board.setPieces(pieces);
 
         // board data
-        board.activeColor = Color.fromChar(active);
-        board.halfmove = halfmove;
-        board.fullmove = fullmove;
+        board.setActiveColor(Color.fromChar(active));
+        board.setHalfmove(halfmove);
+        board.setFullmove(fullmove);
         if (!"-".equals(epStr)) {
             int[] epXY = board.fromAlg(epStr);
             board.setEnPassant(epXY);
@@ -52,9 +52,9 @@ public final class FenAdapter {
 
     public static String toFen(Board board) {
         StringBuilder placement = new StringBuilder();
-        for (int row = 0; row < board.height; row++) {
+        for (int row = 0; row < board.getHeight(); row++) {
             int empty = 0;
-            for (int col = 0; col < board.width; col++) {
+            for (int col = 0; col < board.getWidth(); col++) {
                 Piece piece = board.getPieceAt(col, row);
                 if (piece == null) {
                     empty++;
@@ -68,21 +68,21 @@ public final class FenAdapter {
                 }
             }
             if (empty > 0) placement.append(empty);
-            if (row < board.height - 1) placement.append('/');
+            if (row < board.getHeight() - 1) placement.append('/');
         }
 
-        String side = (board.activeColor == Color.WHITE) ? "w" :
-                      (board.activeColor == Color.BLACK) ? "b" : "w";
+        String side = (board.getActiveColor() == Color.WHITE) ? "w" :
+                      (board.getActiveColor() == Color.BLACK) ? "b" : "w";
 
         String castling = FenAdapter.getCastlingString(board);
         String ep = getEnPassantString(board);
 
-        return placement + " " + side + " " + castling + " " + ep + " " + board.halfmove + " " + board.fullmove;
+        return placement + " " + side + " " + castling + " " + ep + " " + board.getHalfmove() + " " + board.getFullmove();
     }
 
     public static String getCastlingString(Board board) {
         boolean K = false, Q = false, k = false, q = false;
-        for (Piece p : board.pieces) {
+        for (Piece p : board.getPieces()) {
             if (p instanceof King king) {
                 boolean isWhite = p.getColor() == Color.WHITE;
                 if (isWhite) {
@@ -99,8 +99,8 @@ public final class FenAdapter {
     }
 
     public static String getEnPassantString(Board board) {
-        if (board.enPassant[0] < 0 || board.enPassant[1] < 0) return "-";
-        return board.toAlg(board.enPassant[0], board.enPassant[1]);
+        if (board.getEnPassantXY()[0] < 0 || board.getEnPassantXY()[1] < 0) return "-";
+        return board.toAlg(board.getEnPassantXY()[0], board.getEnPassantXY()[1]);
     }
 
     private static List<Piece> buildPieces(List<String> rows) {

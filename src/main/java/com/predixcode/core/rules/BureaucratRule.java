@@ -9,15 +9,14 @@ public class BureaucratRule extends StandardRule {
     @Override
     protected void handleCaptureIfAny(Board board, int[] toXY) {
         Piece captured = board.getPieceAt(toXY[0], toXY[1]);
-        boolean isBureaucrat = captured != null && captured instanceof Bureaucrat;
-
         if (captured != null) {
+            boolean isBureaucrat = captured instanceof Bureaucrat;
             if (isBureaucrat) {
                 captured.actionOnCapture(board);
-            } else {
-                board.pieces.remove(captured);
+                return;
             }
         }
+        super.handleCaptureIfAny(board, toXY);
     }
     
 }

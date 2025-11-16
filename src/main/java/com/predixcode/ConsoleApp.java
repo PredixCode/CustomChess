@@ -10,7 +10,7 @@ public class ConsoleApp {
     
     public ConsoleApp() {
         this.board = Board.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        board.rules.add(new com.predixcode.core.rules.StandardRule());
+        board.addRule(new com.predixcode.core.rules.StandardRule());
     }
 
     private String askMove(Scanner sc) {

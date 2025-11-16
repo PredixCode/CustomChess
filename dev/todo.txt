@@ -1,4 +1,4 @@
-- missing logic for check: winning/loosing/remis conditions
-- missing reset button
-- build to apk
+- refactor piece logic
+- missing menu -> start, reset, configure
 - local server: play with friends via same network
+- build to apk

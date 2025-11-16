@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.predixcode.core.board.Board;
+import com.predixcode.core.board.ClickOutcome;
+import static com.predixcode.core.board.ClickOutcome.Type.SELECT;
 import com.predixcode.core.board.pieces.Piece;
 import com.predixcode.core.rules.Rule;
 
@@ -76,18 +78,18 @@ public abstract class Gui extends Application {
         initGui(stage);
     }
 
-    private void initGame() {
+    protected void initGame() {
         board.ensureRules();
-        for (Rule r : board.rules) {
+        for (Rule r : board.getRules()) {
             System.out.println("Board has rule: " + r.getClass().getSimpleName());
             r.applyOnStart(board);
         }
     }
 
-    private void initGui(Stage stage) {
-        this.squares = new Rectangle[board.height][board.width];
-        final double baseW = PADDING + board.width * TILE + PADDING;
-        final double baseH = PADDING + board.height * TILE + PADDING;
+    protected void initGui(Stage stage) {
+        this.squares = new Rectangle[board.getHeight()][board.getWidth()];
+        final double baseW = PADDING + board.getWidth() * TILE + PADDING;
+        final double baseH = PADDING + board.getHeight() * TILE + PADDING;
 
         // Center area: scalable board content
         StackPane center = new StackPane();
@@ -141,11 +143,65 @@ public abstract class Gui extends Application {
         infoPanel.refresh(board, moveHistory);
     }
 
+    protected void onSquareClick(int x, int y) {
+        clearHighlights();
+
+        ClickOutcome out = board.handleSquareClick(x, y);
+        System.out.println(out.type.name());
+
+        switch (out.type) {
+            case SELECT -> {
+                // purely visual; Board owns the true selection/targets
+                selected = out.selected;
+                legalTargets = out.legalTargets != null ? out.legalTargets : Set.of();
+
+                if (selected != null) {
+                    highlightSelection(selected[0], selected[1]);
+                }
+                if (legalTargets != null && !legalTargets.isEmpty()) {
+                    highlightTargets(legalTargets);
+                }
+                // Keep last move shading
+                highlightLastMove(lastFrom, lastTo);
+            }
+
+            case MOVE_APPLIED -> {
+                lastFrom = out.from;
+                lastTo   = out.to;
+
+                // Animate the moved piece (look up after model changed)
+                Piece moved = board.getPieceAt(lastTo[0], lastTo[1]);
+                ImageView capturedNode = (out.captured != null) ? pieceNodes.get(out.captured) : null;
+
+                animateMove(moved, lastFrom[0], lastFrom[1], lastTo[0], lastTo[1], capturedNode);
+
+                // Remove captured node mapping (if any)
+                if (out.captured != null && !board.getPieces().contains(out.captured)) {
+                    ImageView removed = pieceNodes.remove(out.captured);
+                    if (removed != null) pieceLayer.getChildren().remove(removed);
+                }
+
+                // Record move and refresh side panel
+                String ply = board.toAlg(lastFrom[0], lastFrom[1]) + "-" + board.toAlg(lastTo[0], lastTo[1]);
+                moveHistory.add(ply);
+                infoPanel.refresh(board, moveHistory);
+
+                // Shade last move
+                highlightLastMove(lastFrom, lastTo);
+            }
+
+            case MOVE_REJECTED, NOOP -> {
+                // Optionally log out.error somewhere (toast/console)
+                highlightLastMove(lastFrom, lastTo);
+            }
+        }
+    }
+
     private Pane buildSquares() {
         Pane pane = new Pane();
 
-        for (int y = 0; y < board.height; y++) {
-            for (int x = 0; x < board.width; x++) {
+        for (int y = 0; y < board.getHeight(); y++) {
+            for (int x = 0; x < board.getWidth(); x++) {
                 final int fx = x;
                 final int fy = y;
 
@@ -162,8 +218,8 @@ public abstract class Gui extends Application {
     }
 
     private void repaintBoard() {
-        for (int y = 0; y < board.height; y++) {
-            for (int x = 0; x < board.width; x++) {
+        for (int y = 0; y < board.getHeight(); y++) {
+            for (int x = 0; x < board.getWidth(); x++) {
                 squares[y][x].setFill(getSquareBaseFill(x, y));
             }
         }
@@ -177,20 +233,20 @@ public abstract class Gui extends Application {
     private Pane buildCoordinates() {
         Pane coords = new Pane();
         coords.setMouseTransparent(true);
-        coords.setPrefSize(PADDING + board.width * TILE + PADDING, PADDING + board.height * TILE + PADDING);
+        coords.setPrefSize(PADDING + board.getWidth() * TILE + PADDING, PADDING + board.getHeight() * TILE + PADDING);
 
         // Files a-h (bottom)
-        for (int x = 0; x < board.width; x++) {
+        for (int x = 0; x < board.getWidth(); x++) {
             char file = (char) ('a' + x);
             Text t = text(String.valueOf(file), 12);
             t.setX(PADDING + x * TILE + TILE - 14);
-            t.setY(PADDING + board.height * TILE + 16);
+            t.setY(PADDING + board.getHeight() * TILE + 16);
             t.setFill(Paint.valueOf("#333"));
             coords.getChildren().add(t);
         }
         // Ranks 8-1 (left)
-        for (int y = 0; y < board.height; y++) {
-            int rank = board.height - y;
+        for (int y = 0; y < board.getHeight(); y++) {
+            int rank = board.getHeight() - y;
             Text t = text(String.valueOf(rank), 12);
             t.setX(6);
             t.setY(PADDING + y * TILE + 16);
@@ -210,7 +266,7 @@ public abstract class Gui extends Application {
         pieceLayer.getChildren().clear();
         pieceNodes.clear();
 
-        for (Piece p : board.pieces) {
+        for (Piece p : board.getPieces()) {
             ImageView iv = new ImageView(loadImageFor(p));
             iv.setFitWidth(TILE * 0.9);
             iv.setFitHeight(TILE * 0.9);
@@ -239,7 +295,7 @@ public abstract class Gui extends Application {
     private void refreshPieces() {
         // Build an identity-based membership of current pieces
         IdentityHashMap<Piece, Boolean> currentMap = new IdentityHashMap<>();
-        for (Piece p : board.pieces) currentMap.put(p, Boolean.TRUE);
+        for (Piece p : board.getPieces()) currentMap.put(p, Boolean.TRUE);
 
         // Remove nodes for pieces that no longer exist (identity-based)
         List<Piece> toRemove = new ArrayList<>();
@@ -251,7 +307,7 @@ public abstract class Gui extends Application {
             if (iv != null) pieceLayer.getChildren().remove(iv);
         }
         // Add nodes for new pieces (identity-based)
-        for (Piece p : board.pieces) {
+        for (Piece p : board.getPieces()) {
             if (!pieceNodes.containsKey(p)) {
                 ImageView iv = new ImageView(loadImageFor(p));
                 iv.setFitWidth(TILE * 0.9);
@@ -271,7 +327,7 @@ public abstract class Gui extends Application {
             }
         }
         // Sync positions (identity-based)
-        for (Piece p : board.pieces) {
+        for (Piece p : board.getPieces()) {
             ImageView iv = pieceNodes.get(p);
             if (iv != null) placeNodeAt(iv, p.x, p.y);
         }
@@ -296,87 +352,6 @@ public abstract class Gui extends Application {
             }
         }
         return img;
-    } 
-
-    private void onSquareClick(int x, int y) {
-        clearHighlights();
-
-        if (selected == null) {
-            Piece p = board.getPieceAt(x, y);
-            if (p == null) return;
-            selected = new int[] { x, y };
-            highlightSelection(x, y);
-            legalTargets = p.getLegalMoves(board);
-            highlightTargets(legalTargets);
-            return;
-        }
-
-        Piece selPiece = board.getPieceAt(selected[0], selected[1]);
-        Piece clicked = board.getPieceAt(x, y);
-
-        if (clicked != null && selPiece != null && sameColor(clicked, selPiece)) {
-            selected = new int[] { x, y };
-            highlightSelection(x, y);
-            legalTargets = clicked.getLegalMoves(board);
-            highlightTargets(legalTargets);
-            return;
-        }
-
-        if (selPiece == null) { selected = null; return; }
-
-        String fromAlg = board.toAlg(selected[0], selected[1]);
-        String toAlg = board.toAlg(x, y);
-
-        if (!legalTargets.contains(toAlg)) {
-            selected = null;
-            return;
-        }
-
-        // Pre-move: compute nodes we might animate/fade, but do NOT mutate the model
-        int fromX = selected[0], fromY = selected[1];
-        ImageView capturedNode = null;
-
-        // Regular capture node (piece at destination prior to move)
-        Piece preCaptured = board.getPieceAt(x, y);
-
-        // En passant capture node (destination empty, pawn moves diagonally)
-        boolean isPawn = selPiece.getClass().getSimpleName().equals("Pawn");
-        boolean epAttempt = isPawn && fromX != x && (preCaptured == null);
-        Piece epCaptured = epAttempt ? board.getPieceAt(x, fromY) : null;
-
-        if (preCaptured != null) {
-            capturedNode = pieceNodes.get(preCaptured);
-        } else if (epCaptured != null) {
-            capturedNode = pieceNodes.get(epCaptured);
-        }
-
-        try {
-            board.applyTurn(fromAlg, toAlg);
-            lastFrom = new int[]{fromX, fromY};
-            lastTo = new int[]{x, y};
-
-            // Animate the piece from its original square to the destination
-            animateMove(selPiece, fromX, fromY, x, y, capturedNode);
-
-            // If we faded a captured node, drop it from the map now
-            if (preCaptured != null && !board.pieces.contains(preCaptured)) {
-                pieceNodes.remove(preCaptured);
-            } else if (epCaptured != null && !board.pieces.contains(epCaptured)) {
-                pieceNodes.remove(epCaptured);
-            }
-
-            // Record move and refresh panel
-            String ply = fromAlg + "-" + toAlg;
-            moveHistory.add(ply);
-            infoPanel.refresh(board, moveHistory);
-        } catch (Exception ex) {
-            // Move failed; do nothing to the model or nodes, and optionally log ex
-            System.err.println("Move rejected: " + ex.getMessage());
-        } finally {
-            selected = null;
-            legalTargets.clear();
-            highlightLastMove(lastFrom, lastTo);
-        }
     }
 
     private void animateMove(Piece p, int fromX, int fromY, int toX, int toY, ImageView capturedNode) {
@@ -461,9 +436,5 @@ public abstract class Gui extends Application {
             dot.setFill(targetDotColor);
             highlightLayer.getChildren().add(dot);
         }
-    }
-
-    private boolean sameColor(Piece a, Piece b) {
-        return a.getColor() != null && b.getColor() != null && a.getColor().getCode() == b.getColor().getCode();
     }
 }

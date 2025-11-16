@@ -15,8 +15,8 @@ public class Bureaucrat extends Piece {
     @Override
     public Set<String> getLegalMoves(Board board) {
         Set<String> out = new LinkedHashSet<>();
-        for (int col = 0; col < board.width; col++) {
-            for (int row = 0; row < board.height; row++) {
+        for (int col = 0; col < board.getWidth(); col++) {
+            for (int row = 0; row < board.getHeight(); row++) {
                 if (board.isEmpty(row, col))
                     out.add(board.toAlg(col, row));
             }

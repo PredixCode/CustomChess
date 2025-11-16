@@ -2,41 +2,88 @@ package com.predixcode.core.board;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.predixcode.core.board.pieces.King;
+import com.predixcode.core.board.pieces.Pawn;
 import com.predixcode.core.board.pieces.Piece;
 import com.predixcode.core.board.pieces.Rook;
 import com.predixcode.core.colors.Color;
 import com.predixcode.core.rules.Rule;
 import com.predixcode.core.rules.StandardRule;
 
+
 public class Board {
-    public int width;
-    public int height;
+    private int width;
+    private int height;
 
-    public int halfmove;
-    public int fullmove;
-    public int[] enPassant = new int[] { -1, -1 }; // enPassant as board coordinates [x, y]; -1 means none
+    private int halfmove;
+    private int fullmove;
+    // enPassant as board coordinates [x, y]; -1 means none
+    private int[] enPassant = new int[] { -1, -1 };
 
-    public Color activeColor;
+    private Color activeColor;
 
-    public List<Piece> pieces = new ArrayList<>();
-    public List<Rule> rules = new ArrayList<>();
+    private int[] selectedSquare = null;              // [x,y] selected square
+    private Set<String> cachedLegalTargets = Set.of();// filtered UI highlight set
+    private int[] lastFromXY = null, lastToXY = null; // last move shading
+    private Piece lastCapturedPiece = null;           // who was captured last (incl. EP)
+
+    private final List<Piece> pieces = new ArrayList<>();
+    private final List<Rule> rules = new ArrayList<>();
 
     // Board initialization
     public static Board fromFen(String fen) {
         return FenAdapter.boardFromFen(fen);
     }
 
-    public void setPieces(List<Piece> pieces) { this.pieces = pieces != null ? pieces : new ArrayList<>(); }
+    // ---------------- Encapsulation ----------------
+    public int getWidth() { return width; }
+    public void setWidth(int width) { this.width = width; }
 
-    public void setEnPassant(int[] enPassant) { this.enPassant = enPassant != null ? enPassant : new int[]{-1, -1}; }
-    public int[] getEnPassantXY() { return new int[]{ enPassant[0], enPassant[1] }; }
+    public int getHeight() { return height; }
+    public void setHeight(int height) { this.height = height; }
+
+    public int getHalfmove() { return halfmove; }
+    public void setHalfmove(int halfmove) { this.halfmove = halfmove; }
+    public void increaseHalfmove() { this.halfmove++; }
+    public void resetHalfmove() { this.halfmove = 0; }
+
+    public int getFullmove() { return fullmove; }
+    public void setFullmove(int fullmove) { this.fullmove = fullmove; }
+    public void increaseFullmove() { this.fullmove++; }
+    public void resetFullmove() { this.fullmove = 1; }
+
+    public Color getActiveColor() { return activeColor; }
+    public void setActiveColor(Color activeColor) { this.activeColor = activeColor; }
+
+    public List<Piece> getPieces() { return pieces; }
+
+    public List<Rule> getRules() { return rules; }
+
+    public void setPieces(List<Piece> newPieces) {
+        pieces.clear();
+        if (newPieces != null) pieces.addAll(newPieces);
+    }
+
+    public void addRule(Rule rule) { if (rule != null) rules.add(rule); }
+
+    public void setEnPassant(int[] enPassant) {
+        if (enPassant == null || enPassant.length < 2) {
+            this.enPassant = new int[] { -1, -1 };
+        } else {
+            this.enPassant = new int[] { enPassant[0], enPassant[1] };
+        }
+    }
+
+    public int[] getEnPassantXY() { return new int[] { enPassant[0], enPassant[1] }; }
+
     public void clearEnPassant() { this.enPassant[0] = -1; this.enPassant[1] = -1; }
 
-
-    public void applyTurn(String from, String to) { 
+    // ---------------- Core flow ----------------
+    public void applyTurn(String from, String to) {
         // Check if move is invalid, then throw
         int[] fromXY = fromAlg(from);
         int[] toXY = fromAlg(to);
@@ -45,9 +92,10 @@ public class Board {
         Piece movingPiece = getPieceAt(fromXY[0], fromXY[1]);
         if (movingPiece == null) throw new IllegalArgumentException("No piece at source square: " + from);
 
-        // Apply game rules
+        ensureRules();
+        // Apply game rules (use parsed coordinates to avoid double parsing)
         for (Rule rule : rules) {
-            rule.applyOnTurn(this, movingPiece, from, to);
+            rule.applyOnTurn(this, movingPiece, fromXY, toXY);
         }
     }
 
@@ -68,13 +116,12 @@ public class Board {
 
     public void ensureRules() {
         if (rules.isEmpty()) {
-            System.out.println("Mising Game Rules, injecting STANDARD rule");
             rules.add(new StandardRule());
         }
     }
 
     public String toAlg(int x, int y) {
-        if (x < 0 || y < 0) return "-";
+        if (!inBounds(x, y)) return "-";
         char file = (char) ('a' + x);
         int rank = height - y;
         return "" + file + rank;
@@ -82,23 +129,106 @@ public class Board {
 
     public int[] fromAlg(String alg) {
         if (alg == null) throw new IllegalArgumentException("Square is null");
-        alg = alg.trim();
-        if (alg.equals("-")) return new int[]{-1, -1};
-        if (alg.length() < 2) throw new IllegalArgumentException("Invalid move, must involve ROW and RANK like 'a1', 'r8':" + alg);
+        String trimmed = alg.trim();
+        if (trimmed.equals("-")) return new int[] { -1, -1 };
+        if (trimmed.length() < 2) throw new IllegalArgumentException("Invalid square. Use file+rank like 'a1', 'h8': " + alg);
 
         // Parse file
-        char fileCh = Character.toLowerCase(alg.charAt(0));
+        char fileCh = Character.toLowerCase(trimmed.charAt(0));
         if (fileCh < 'a' || fileCh >= ('a' + width)) {
-            throw new IllegalArgumentException("File out of range: " + alg);
+            throw new IllegalArgumentException("File out of range for board: " + alg);
         }
         int file = fileCh - 'a';
 
         // Parse rank
-        String rankStr = alg.substring(1,alg.length());
-        int rank = Integer.parseInt(rankStr);
+        String rankStr = trimmed.substring(1);
+        int rank;
+        try {
+            rank = Integer.parseInt(rankStr);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Rank must be a number: " + alg, e);
+        }
+        if (rank < 1 || rank > height) {
+            throw new IllegalArgumentException("Rank out of range for board: " + alg);
+        }
         int y = height - rank;
-        return new int[]{file, y};
+        return new int[] { file, y };
     }
+
+    private Set<String> computeUiLegalTargets(Piece p) {
+        Set<String> raw = p.getLegalMoves(this);
+        if (raw == null || raw.isEmpty()) return Set.of();
+
+        Set<String> filtered = new LinkedHashSet<>();
+        int[] from = p.getXY();
+        for (String alg : raw) {
+            int[] to = fromAlg(alg);
+            // UI only: filter out moves that would leave own king in check
+            if (!wouldLeaveOwnKingInCheck(p, from, to)) {
+                filtered.add(alg.toLowerCase());
+            }
+        }
+        return filtered;
+    }
+
+    // UI related
+    public ClickOutcome handleSquareClick(int x, int y) {
+        // First click = selection
+        if (selectedSquare == null) {
+            Piece p = getPieceAt(x, y);
+            if (p == null) return ClickOutcome.noop();
+
+            // only allow selecting active side's pieces (keeps UX consistent)
+            if (getActiveColor() != null && !getActiveColor().equals(p.getColor())) {
+                return ClickOutcome.noop();
+            }
+
+            selectedSquare = new int[] { x, y };
+            cachedLegalTargets = computeUiLegalTargets(p);
+            return ClickOutcome.selection(new int[] { x, y }, cachedLegalTargets);
+        }
+
+        // Second click = reselect same-color, or attempt move
+        Piece selPiece = getPieceAt(selectedSquare[0], selectedSquare[1]);
+        Piece clicked = getPieceAt(x, y);
+
+        if (selPiece == null) {
+            selectedSquare = null;
+            cachedLegalTargets = Set.of();
+            return ClickOutcome.noop();
+        }
+
+        // Reselect if clicking same-color piece
+        if (clicked != null && clicked.getColor() == selPiece.getColor()) {
+            selectedSquare = new int[] { x, y };
+            cachedLegalTargets = computeUiLegalTargets(clicked);
+            return ClickOutcome.selection(new int[] { x, y }, cachedLegalTargets);
+        }
+
+        // Attempt to apply the move via rules.
+        // IMPORTANT: We do NOT pre-reject based on cachedLegalTargets to avoid interfering with custom rules.
+        String fromAlg = toAlg(selectedSquare[0], selectedSquare[1]);
+        String toAlg   = toAlg(x, y);
+        lastCapturedPiece = null;
+
+        try {
+            applyTurn(fromAlg, toAlg); // rules validate and perform the move
+
+            lastFromXY = new int[] { selectedSquare[0], selectedSquare[1] };
+            lastToXY   = new int[] { x, y };
+            Piece cap  = lastCapturedPiece;
+
+            selectedSquare = null;
+            cachedLegalTargets = Set.of();
+
+            return ClickOutcome.moveApplied(lastFromXY, lastToXY, cap);
+        } catch (Exception ex) {
+            selectedSquare = null;
+            cachedLegalTargets = Set.of();
+            return ClickOutcome.moveRejected(ex.getMessage());
+        }
+    }
+
     // ========== Attack detection and helpers ==========
 
     public boolean isSquareAttacked(Color byColor, int x, int y) {
@@ -137,22 +267,20 @@ public class Board {
             if (mover.getColor() == Color.WHITE) {
                 King wk = getKing(Color.WHITE);
                 if (wk != null) {
-                    if (fromX == 0 && fromY == 7) wk.setCastleQueenSide(false);
-                    if (fromX == 7 && fromY == 7) wk.setCastleKingSide(false);
+                    if (fromX == 0 && fromY == 7) wk.setCastleQueenSide(false); // a1 rook moved
+                    if (fromX == 7 && fromY == 7) wk.setCastleKingSide(false);  // h1 rook moved (FIXED)
                 }
             } else if (mover.getColor() == Color.BLACK) {
                 King bk = getKing(Color.BLACK);
                 if (bk != null) {
-                    if (fromX == 0 && fromY == 0) bk.setCastleQueenSide(false);
-                    if (fromX == 7 && fromY == 0) bk.setCastleKingSide(false);
+                    if (fromX == 0 && fromY == 0) bk.setCastleQueenSide(false); // a8 rook moved
+                    if (fromX == 7 && fromY == 0) bk.setCastleKingSide(false);  // h8 rook moved
                 }
             }
         }
 
         // If a rook was captured on its original square, clear that side for that color
         if (isCapture) {
-            // The captured piece has already been removed; check destination square coordinates
-            // against original rook squares to clear the opponent's rights.
             King wk = getKing(Color.WHITE);
             King bk = getKing(Color.BLACK);
             if (toX == 0 && toY == 7 && wk != null) wk.setCastleQueenSide(false);
@@ -164,9 +292,206 @@ public class Board {
 
     public King getKing(Color color) {
         for (Piece p : pieces) {
-            if (p instanceof King && p.getColor() == color) return (King)p;
+            if (p instanceof King && p.getColor() == color) return (King) p;
         }
         return null;
+    }
+
+    // Backwards-compatibility signature kept (delegates to this instance)
+    public boolean isCheckmate(Board ignored, Color color) {
+        return isCheckmate(color);
+    }
+
+    public boolean isCheckmate(Color color) {
+        return isInCheck(color) && !hasAnyLegalMove(color);
+    }
+
+    public boolean isInCheck(Color color) {
+        King k = getKing(color);
+        int[] kingXY = (k != null) ? k.getXY() : null;
+        if (kingXY == null) return false; // No king found; treat as not in check.
+        return isSquareAttacked(color.opposite(), kingXY[0], kingXY[1]);
+    }
+
+    public boolean hasAnyLegalMove(Color color) {
+        for (Piece p : pieces) {
+            if (p.getColor() != color) continue;
+            Set<String> moves = p.getLegalMoves(this);
+            if (moves == null || moves.isEmpty()) continue;
+
+            for (String alg : moves) {
+                int[] toXY = fromAlg(alg);
+                if (!wouldLeaveOwnKingInCheck(p, p.getXY(), toXY)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean wouldLeaveOwnKingInCheck(Piece movingPiece, int[] fromXY, int[] toXY) {
+        // Save state needed to revert
+        int oldX = movingPiece.x;
+        int oldY = movingPiece.y;
+
+        Piece captured = null;
+        boolean epCapture = false;
+        int dir = forwardDir(movingPiece.getColor());
+
+        // Handle en passant capture for simulation
+        if (movingPiece instanceof Pawn
+                && fromXY[0] != toXY[0]
+                && isEmpty(toXY[0], toXY[1])) {
+            Piece epPawn = getPieceAt(toXY[0], toXY[1] - dir);
+            if (epPawn != null && epPawn instanceof Pawn && epPawn.getColor() != movingPiece.getColor()) {
+                captured = epPawn;
+                epCapture = true;
+                pieces.remove(captured);
+            }
+        } else {
+            // Normal capture at destination square
+            captured = getPieceAt(toXY[0], toXY[1]);
+            if (captured != null) pieces.remove(captured);
+        }
+
+        // Handle castling rook move (simulate rook motion)
+        Piece rookMoved = null;
+        int rookOldX = 0, rookOldY = 0;
+        boolean castling = (movingPiece instanceof King) && Math.abs(toXY[0] - fromXY[0]) == 2;
+        if (castling) {
+            int rankY = fromXY[1];
+            if (toXY[0] > fromXY[0]) {
+                // King-side
+                Piece rook = findFirstRookOnRay(fromXY[0], rankY, +1, 0, movingPiece.getColor());
+                if (rook instanceof Rook) {
+                    rookMoved = rook;
+                    rookOldX = rook.x; rookOldY = rook.y;
+                    rook.setPosition(fromXY[0] + 1, rankY);
+                }
+            } else {
+                // Queen-side
+                Piece rook = findFirstRookOnRay(fromXY[0], rankY, -1, 0, movingPiece.getColor());
+                if (rook instanceof Rook) {
+                    rookMoved = rook;
+                    rookOldX = rook.x; rookOldY = rook.y;
+                    rook.setPosition(fromXY[0] - 1, rankY);
+                }
+            }
+        }
+
+        // Make the move
+        movingPiece.setPosition(toXY[0], toXY[1]);
+
+        // Evaluate check on own king
+        King myKing = getKing(movingPiece.getColor());
+        int[] kingXY = (myKing != null) ? myKing.getXY() : null;
+        boolean inCheck = (kingXY != null) && isSquareAttacked(movingPiece.getColor().opposite(), kingXY[0], kingXY[1]);
+
+        // Revert move
+        movingPiece.setPosition(oldX, oldY);
+        if (captured != null) {
+            // If EP capture, piece removed was not at destination; just add it back
+            pieces.add(captured);
+        }
+        if (rookMoved != null) {
+            rookMoved.setPosition(rookOldX, rookOldY);
+        }
+
+        return inCheck;
+    }
+
+    /**
+     * Performs en passant if the move is a diagonal pawn move into an empty square.
+     * Returns true if an en passant capture was performed.
+     */
+    public boolean performEnPassantIfApplicable(Piece movingPiece, int[] fromXY, int[] toXY) {
+        boolean isPawn = movingPiece instanceof Pawn;
+        if (!isPawn) return false;
+
+        // Diagonal into empty square => possible EP
+        if (fromXY[0] != toXY[0] && isEmpty(toXY[0], toXY[1])) {
+            int dir = forwardDir(movingPiece.getColor());
+            Piece epPawn = getPieceAt(toXY[0], toXY[1] - dir);
+            if (epPawn == null || !(epPawn instanceof Pawn) || epPawn.getColor() == movingPiece.getColor()) {
+                throw new IllegalStateException("Invalid en passant capture attempted");
+            }
+            lastCapturedPiece = epPawn;
+            pieces.remove(epPawn);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Handles castling (king moves two squares horizontally), moves the rook,
+     * disables king castling rights and clears en passant target.
+     */
+    public void handleCastling(King king, int[] fromXY, int[] toXY) {
+        int rankY = fromXY[1];
+        if (toXY[0] > fromXY[0]) {
+            // King-side castle: move rook from nearest right rook to f-file (x = fromX + 1)
+            Piece rook = findFirstRookOnRay(fromXY[0], rankY, +1, 0, king.getColor());
+            if (!(rook instanceof Rook)) {
+                throw new IllegalStateException("No rook found for king-side castling");
+            }
+            int rookToX = fromXY[0] + 1;
+            ((Rook) rook).setPosition(rookToX, rankY);
+        } else {
+            // Queen-side castle: move rook from nearest left rook to d-file (x = fromX - 1)
+            Piece rook = findFirstRookOnRay(fromXY[0], rankY, -1, 0, king.getColor());
+            if (!(rook instanceof Rook)) {
+                throw new IllegalStateException("No rook found for queen-side castling");
+            }
+            int rookToX = fromXY[0] - 1;
+            ((Rook) rook).setPosition(rookToX, rankY);
+        }
+
+        // King loses castling rights and EP is cleared on a castle
+        king.setCastleKingSide(false);
+        king.setCastleQueenSide(false);
+        clearEnPassant();
+    }
+
+    /**
+     * Handles standard capture if there is a piece at the destination square.
+     */
+    public void handleCaptureIfAny(int[] toXY) {
+        Piece captured = getPieceAt(toXY[0], toXY[1]);
+        if (captured != null) {
+            lastCapturedPiece = captured;
+            pieces.remove(captured);
+        }
+    }
+
+    /**
+     * Updates the en passant target square if the moving piece is a pawn
+     */
+    public void updateEnPassantTargetIfApplicable(Piece movingPiece, int[] fromXY, int[] toXY) {
+        clearEnPassant();
+        if (movingPiece instanceof Pawn && Math.abs(toXY[1] - fromXY[1]) == 2) {
+            int dir = forwardDir(movingPiece.getColor());
+            int epX = fromXY[0];
+            int epY = fromXY[1] + dir; // mid square between start and end
+            setEnPassant(new int[] { epX, epY });
+        }
+    }
+
+    // ================== Utilities ===================
+
+    public boolean isCastlingMove(int[] fromXY, int[] toXY) {
+        return Math.abs(toXY[0] - fromXY[0]) == 2;
+    }
+
+    public boolean isSquareOccupied(int[] xy) { return getPieceAt(xy[0], xy[1]) != null; }
+
+    public boolean isSquareOccupied(int x, int y) { return getPieceAt(x, y) != null; }
+
+    /**
+     * Returns movement direction for the given color:
+     * WHITE moves "up" (-1), BLACK moves "down" (+1).
+     */
+    public int forwardDir(Color color) {
+        return (color == Color.WHITE) ? -1 : 1;
     }
 
     @Override
