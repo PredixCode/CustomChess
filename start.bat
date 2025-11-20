@@ -1,1 +1,1 @@
-CALL mvn "exec:java" "-Dexec.mainClass=com.predixcode.App"
+./gradlew :desktop:run

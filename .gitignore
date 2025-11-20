@@ -1,3 +1,7 @@
 .vscode/*
 .github/*
-target/*
+
+gradlew
+gradlew.bat
+.gradle/*
+build/*

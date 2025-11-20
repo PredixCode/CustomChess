@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+application {
+    mainClass = 'com.predixcode.App'
+}
+
+dependencies {
+    implementation project(':core')
+}
+
+javafx {
+    version = '21'
+    modules = [
+        'javafx.controls',
+        'javafx.graphics'
+    ]
+}
