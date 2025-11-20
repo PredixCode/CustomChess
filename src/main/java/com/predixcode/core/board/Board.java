@@ -11,8 +11,9 @@ import com.predixcode.core.board.pieces.Pawn;
 import com.predixcode.core.board.pieces.Piece;
 import com.predixcode.core.board.pieces.Rook;
 import com.predixcode.core.colors.Color;
+import com.predixcode.core.rules.MoveContext;
 import com.predixcode.core.rules.Rule;
-import com.predixcode.core.rules.StandardRule;
+import com.predixcode.core.rules.RuleBuilder;
 
 
 public class Board {
@@ -61,14 +62,19 @@ public class Board {
 
     public List<Piece> getPieces() { return pieces; }
 
-    public List<Rule> getRules() { return rules; }
-
     public void setPieces(List<Piece> newPieces) {
         pieces.clear();
         if (newPieces != null) pieces.addAll(newPieces);
     }
 
+    public List<Rule> getRules() { return rules; }
+
     public void addRule(Rule rule) { if (rule != null) rules.add(rule); }
+
+    public void setRules(List<Rule> newRules) {
+        rules.clear();
+        if (newRules != null) rules.addAll(newRules);
+    }
 
     public void setEnPassant(int[] enPassant) {
         if (enPassant == null || enPassant.length < 2) {
@@ -84,19 +90,47 @@ public class Board {
 
     // ---------------- Core flow ----------------
     public void applyTurn(String from, String to) {
-        // Check if move is invalid, then throw
         int[] fromXY = fromAlg(from);
-        int[] toXY = fromAlg(to);
-        if (fromXY == null || toXY == null) throw new IllegalArgumentException("Invalid (null) move coordinates");
+        int[] toXY   = fromAlg(to);
+        if (fromXY == null || toXY == null)
+            throw new IllegalArgumentException("Invalid (null) move coordinates");
 
         Piece movingPiece = getPieceAt(fromXY[0], fromXY[1]);
-        if (movingPiece == null) throw new IllegalArgumentException("No piece at source square: " + from);
+        if (movingPiece == null)
+            throw new IllegalArgumentException("No piece at source square: " + from);
 
         ensureRules();
-        // Apply game rules (use parsed coordinates to avoid double parsing)
+
+        MoveContext ctx = new MoveContext(movingPiece, fromXY, toXY);
+
+        // 1) Validation first on a clean board
         for (Rule rule : rules) {
-            rule.applyOnTurn(this, movingPiece, fromXY, toXY);
+            rule.validateMove(this, ctx);
         }
+
+        // 2) Now rules may mutate state in beforeMove (e.g. EP side-effects)
+        for (Rule rule : rules) {
+            rule.beforeMove(this, ctx);
+        }
+
+        // 3) Core move: actually move the piece
+        performCoreMove(ctx);
+
+        // 4) Post-move hooks (captures, castling, EP target, etc.)
+        for (Rule rule : rules) {
+            rule.afterMove(this, ctx);
+        }
+
+        // 5) End-of-turn hooks (turn switching, clocks, multi-move, etc.)
+        for (Rule rule : rules) {
+            rule.afterTurn(this, ctx);
+        }
+    }
+
+    private void performCoreMove(MoveContext ctx) {
+        // Minimal core: simply move the piece.
+        // Most capture logic is handled in rules (StandardMoveRule, BureaucratCaptureRule, etc).
+        ctx.piece.setPosition(ctx.toXY[0], ctx.toXY[1]);
     }
 
     public Piece getPieceAt(int x, int y) {
@@ -116,7 +150,7 @@ public class Board {
 
     public void ensureRules() {
         if (rules.isEmpty()) {
-            rules.add(new StandardRule());
+            rules.addAll(RuleBuilder.defaultRules());
         }
     }
 
@@ -458,7 +492,18 @@ public class Board {
      * Handles standard capture if there is a piece at the destination square.
      */
     public void handleCaptureIfAny(int[] toXY) {
-        Piece captured = getPieceAt(toXY[0], toXY[1]);
+        Piece captured = null;
+
+        // Prefer a piece of the opposite color to the mover (activeColor)
+        for (Piece p : pieces) {
+            if (p.posX == toXY[0] && p.posY == toXY[1]) {
+                if (activeColor == null || !p.getColor().equals(activeColor)) {
+                    captured = p;
+                    break;
+                }
+            }
+        }
+
         if (captured != null) {
             lastCapturedPiece = captured;
             pieces.remove(captured);

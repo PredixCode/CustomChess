@@ -11,7 +11,6 @@ import java.util.Set;
 
 import com.predixcode.core.board.Board;
 import com.predixcode.core.board.ClickOutcome;
-import static com.predixcode.core.board.ClickOutcome.Type.SELECT;
 import com.predixcode.core.board.pieces.Piece;
 import com.predixcode.core.rules.Rule;
 
@@ -22,14 +21,18 @@ import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.DoubleBinding;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -48,11 +51,16 @@ public abstract class Gui extends Application {
     private static final String THEME = "neo/upscale"; // folder under /pieces/
 
     protected Board board;
+    protected String fenOverride; 
+
     private Rectangle[][] squares;
+    private Scene gameScene;      // the active game scene
     private final Group highlightLayer = new Group();
     private final Group pieceLayer = new Group();
     private final Group overlayLayer = new Group();
     private final Map<Piece, ImageView> pieceNodes = new HashMap<>();
+
+    private Runnable backToMenuHandler;
 
     // Selection and last move tracking
     private int[] selected = null; // [x, y] board coords
@@ -73,7 +81,6 @@ public abstract class Gui extends Application {
         if (this.board == null) {
             throw new IllegalStateException("Board not initialized before GUI start");
         }
-
         initGame();
         initGui(stage);
     }
@@ -82,7 +89,7 @@ public abstract class Gui extends Application {
         board.ensureRules();
         for (Rule r : board.getRules()) {
             System.out.println("Board has rule: " + r.getClass().getSimpleName());
-            r.applyOnStart(board);
+            r.onGameStart(board);
         }
     }
 
@@ -111,15 +118,26 @@ public abstract class Gui extends Application {
         content.getChildren().add(buildCoordinates());
         center.getChildren().add(content);
 
-        // Right panel
+        // Right info panel
         double panelWidth = 400;
         infoPanel = new GameInfoPanel(panelWidth);
         BorderPane root = new BorderPane();
         root.setCenter(center);
         root.setRight(infoPanel);
 
+        // Add a top bar with "Go Back" button
+        HBox topBar = new HBox();
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setPadding(new Insets(8));
+        Button backBtn = new Button("← Menu");
+        backBtn.setOnAction(e -> goBackToMenu());
+        backBtn.setStyle("-fx-font-size: 14px; -fx-background-color: #ececec; -fx-border-color: #c7c7c7;");
+        topBar.getChildren().add(backBtn);
+        root.setTop(topBar);
+
         // Build scene
         Scene scene = new Scene(root, baseW + panelWidth, baseH);
+        this.gameScene = scene;
         stage.setTitle("Custom Chess");
         stage.setScene(scene);
         stage.setResizable(true);
@@ -195,6 +213,12 @@ public abstract class Gui extends Application {
                 // Optionally log out.error somewhere (toast/console)
                 highlightLastMove(lastFrom, lastTo);
             }
+        }
+    }
+
+    private void goBackToMenu() {
+    if (backToMenuHandler != null) {
+        backToMenuHandler.run();
         }
     }
 
@@ -408,6 +432,18 @@ public abstract class Gui extends Application {
             refreshPieces(); // sync other state (e.g., rook after castling, EP removal)
         });
         tl.play();
+    }
+
+    public void setFenOverride(String fenOverride) {
+        this.fenOverride = fenOverride;
+    }
+
+    public Scene getGameScene() {
+        return gameScene;
+    }
+
+    public void setBackToMenuHandler(Runnable handler) {
+        this.backToMenuHandler = handler;
     }
 
     private double snapX(int x) { return x * TILE + (TILE - TILE * 0.9) / 2.0; }

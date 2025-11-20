@@ -1,31 +1,36 @@
 package com.predixcode.core.rules;
 
-
 import com.predixcode.core.board.Board;
-import com.predixcode.core.board.pieces.Piece;
 
+/**
+ * Composable rule with multiple hooks.
+ * Override only what you need.
+ */
 public abstract class Rule {
 
-    public abstract void applyOnStart(Board board);
+    /** Called once when a new game starts (after Board is set up). */
+    public void onGameStart(Board board) {}
 
-    public abstract void applyOnTurn(Board board, Piece movingPiece, int[] fromXY, int[] toXY);
+    /** Called before any validation. Rarely used. */
+    public void beforeMove(Board board, MoveContext ctx) {}
 
-    public void applyOnTurn(Board board, Piece movingPiece, String from, String to) {
-        int[] fromXY = board.fromAlg(from);
-        int[] toXY   = board.fromAlg(to);
-        applyOnTurn(board, movingPiece, fromXY, toXY);
-    }
+    /**
+     * Called to validate a move.
+     * Throw IllegalArgumentException / IllegalStateException to reject the move.
+     */
+    public void validateMove(Board board, MoveContext ctx) {}
 
-    protected abstract void checkIllegal(Board board, Piece movingPiece, int[] fromXY, int[] toXY);
+    /**
+     * Called after the piece has been moved (core move performed) and
+     * after base capture has been processed (if you do that in the core).
+     */
+    public void afterMove(Board board, MoveContext ctx) {}
 
-    protected abstract boolean enPassant(boolean isCapture, Board board, Piece movingPiece, int[] fromXY, int[] toXY);
-
-    protected abstract void castling(Board board, Piece movingPiece, int[] fromXY, int[] toXY, boolean isCapture);
-
-    protected abstract void updateSpecialMoveStates(Board board, Piece movingPiece, int[] fromXY, int[] toXY, boolean isCapture);
-
-    protected abstract void checkForEndConditions(Board board, Piece movingPiece);
-
-    protected abstract void submitNextTurn(Board board, Piece movingPiece, boolean isCapture);
-    
+    /**
+     * Called at the end of the move. Good place for:
+     * - halfmove/fullmove updates
+     * - activeColor / multi-move budget
+     * - end conditions (checkmate, stalemate, custom wins)
+     */
+    public void afterTurn(Board board, MoveContext ctx) {}
 }
