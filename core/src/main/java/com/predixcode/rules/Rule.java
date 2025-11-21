@@ -1,6 +1,6 @@
-package com.predixcode.core.rules;
+package com.predixcode.rules;
 
-import com.predixcode.core.board.Board;
+import com.predixcode.board.Board;
 
 /**
  * Composable rule with multiple hooks.

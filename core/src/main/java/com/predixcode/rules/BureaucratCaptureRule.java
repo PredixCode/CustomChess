@@ -1,8 +1,8 @@
-package com.predixcode.core.rules;
+package com.predixcode.rules;
 
-import com.predixcode.core.board.Board;
-import com.predixcode.core.board.pieces.Bureaucrat;
-import com.predixcode.core.board.pieces.Piece;
+import com.predixcode.board.Board;
+import com.predixcode.board.pieces.Bureaucrat;
+import com.predixcode.board.pieces.Piece;
 
 public class BureaucratCaptureRule extends Rule {
 

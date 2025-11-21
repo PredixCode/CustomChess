@@ -1,9 +1,9 @@
-package com.predixcode.core.board.pieces;
+package com.predixcode.board.pieces;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import com.predixcode.core.board.Board;
+import com.predixcode.board.Board;
 
 public class Bishop extends Piece {
 

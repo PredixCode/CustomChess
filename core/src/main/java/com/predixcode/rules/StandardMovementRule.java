@@ -1,9 +1,9 @@
-package com.predixcode.core.rules;
+package com.predixcode.rules;
 
-import com.predixcode.core.board.Board;
-import com.predixcode.core.board.pieces.King;
-import com.predixcode.core.board.pieces.Pawn;
-import com.predixcode.core.board.pieces.Piece;
+import com.predixcode.board.Board;
+import com.predixcode.board.pieces.King;
+import com.predixcode.board.pieces.Pawn;
+import com.predixcode.board.pieces.Piece;
 
 public class StandardMovementRule extends Rule {
 

@@ -1,6 +1,6 @@
 package com.predixcode.ui;
 
-import com.predixcode.core.board.Board;
+import com.predixcode.board.Board;
 
 /**
  * Simple Gui that uses a pre-constructed Board.

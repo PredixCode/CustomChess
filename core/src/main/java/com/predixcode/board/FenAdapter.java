@@ -1,12 +1,12 @@
-package com.predixcode.core.board;
+package com.predixcode.board;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.predixcode.core.board.pieces.King;
-import com.predixcode.core.board.pieces.Piece;
-import com.predixcode.core.colors.Color;
+import com.predixcode.board.pieces.King;
+import com.predixcode.board.pieces.Piece;
+import com.predixcode.colors.Color;
 
 public final class FenAdapter {
     private FenAdapter() {}

@@ -1,10 +1,10 @@
-package com.predixcode.core.board.pieces;
+package com.predixcode.board.pieces;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import com.predixcode.core.board.Board;
-import com.predixcode.core.colors.Color;
+import com.predixcode.board.Board;
+import com.predixcode.colors.Color;
 
 public class King extends Piece {
     private boolean canCastleKingSide;
@@ -29,7 +29,7 @@ public class King extends Piece {
                 int tx = this.posX + dx;
                 int ty = this.posY + dy;
                 if (!board.inBounds(tx, ty)) continue;
-                var at = board.getPieceAt(tx, ty);
+                Piece at = board.getPieceAt(tx, ty);
                 if (at == null || !at.getColor().equals(this.color)) {
                     // Also ensure we don't step into check
                     if (!board.isSquareAttacked(this.color.opposite(), tx, ty)) {

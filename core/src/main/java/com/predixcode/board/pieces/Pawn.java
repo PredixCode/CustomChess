@@ -1,10 +1,10 @@
-package com.predixcode.core.board.pieces;
+package com.predixcode.board.pieces;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import com.predixcode.core.board.Board;
-import com.predixcode.core.colors.Color;
+import com.predixcode.board.Board;
+import com.predixcode.colors.Color;
 
 public class Pawn extends Piece {
 
@@ -39,7 +39,7 @@ public class Pawn extends Piece {
             int ty = this.posY + dir;
             if (!board.inBounds(tx, ty)) continue;
 
-            var at = board.getPieceAt(tx, ty);
+            Piece at = board.getPieceAt(tx, ty);
             if (at != null && !at.getColor().equals(this.color)) {
                 out.add(board.toAlg(tx, ty));
             }
@@ -54,7 +54,7 @@ public class Pawn extends Piece {
                 if (tx == ep[0] && ty == ep[1]) {
                     // Ensure a capturable enemy pawn exists on adjacent file at current rank
                     int capturedPawnY = this.posY; // the enemy pawn is adjacent on same rank
-                    var sidePawn = board.getPieceAt(tx, capturedPawnY);
+                    Piece sidePawn = board.getPieceAt(tx, capturedPawnY);
                     if (sidePawn instanceof Pawn && !sidePawn.getColor().equals(this.color)) {
                         out.add(board.toAlg(tx, ty));
                     }

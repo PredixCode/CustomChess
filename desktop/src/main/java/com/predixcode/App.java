@@ -2,9 +2,9 @@ package com.predixcode;
 
 import java.util.List;
 
-import com.predixcode.core.board.Board;
-import com.predixcode.core.rules.Rule;
-import com.predixcode.core.rules.RuleBuilder;
+import com.predixcode.board.Board;
+import com.predixcode.rules.Rule;
+import com.predixcode.rules.RuleBuilder;
 import com.predixcode.ui.ConfigMenu;
 import com.predixcode.ui.ConfigurableGui;
 import com.predixcode.ui.Gui;

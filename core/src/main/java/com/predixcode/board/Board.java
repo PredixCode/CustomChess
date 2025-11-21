@@ -1,4 +1,4 @@
-package com.predixcode.core.board;
+package com.predixcode.board;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -6,14 +6,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.predixcode.core.board.pieces.King;
-import com.predixcode.core.board.pieces.Pawn;
-import com.predixcode.core.board.pieces.Piece;
-import com.predixcode.core.board.pieces.Rook;
-import com.predixcode.core.colors.Color;
-import com.predixcode.core.rules.MoveContext;
-import com.predixcode.core.rules.Rule;
-import com.predixcode.core.rules.RuleBuilder;
+import com.predixcode.board.pieces.King;
+import com.predixcode.board.pieces.Pawn;
+import com.predixcode.board.pieces.Piece;
+import com.predixcode.board.pieces.Rook;
+import com.predixcode.colors.Color;
+import com.predixcode.rules.MoveContext;
+import com.predixcode.rules.Rule;
+import com.predixcode.rules.RuleBuilder;
 
 
 public class Board {

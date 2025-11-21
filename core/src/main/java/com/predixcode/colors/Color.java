@@ -1,4 +1,4 @@
-package com.predixcode.core.colors;
+package com.predixcode.colors;
 
 public abstract class Color {
     protected String colorName;

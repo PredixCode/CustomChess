@@ -1,4 +1,4 @@
-package com.predixcode.core.colors;
+package com.predixcode.colors;
 
 public class White extends Color {
     

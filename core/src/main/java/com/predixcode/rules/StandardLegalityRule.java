@@ -1,10 +1,10 @@
-package com.predixcode.core.rules;
+package com.predixcode.rules;
 
 import java.util.Set;
 
-import com.predixcode.core.board.Board;
-import com.predixcode.core.board.pieces.Piece;
-import com.predixcode.core.colors.Color;
+import com.predixcode.board.Board;
+import com.predixcode.board.pieces.Piece;
+import com.predixcode.colors.Color;
 
 public class StandardLegalityRule extends Rule {
 

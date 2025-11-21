@@ -1,9 +1,9 @@
-package com.predixcode.core.board.pieces;
+package com.predixcode.board.pieces;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import com.predixcode.core.board.Board;
+import com.predixcode.board.Board;
 
 public class Knight extends Piece {
 
@@ -23,7 +23,7 @@ public class Knight extends Piece {
             int tx = this.posX + d[0];
             int ty = this.posY + d[1];
             if (!board.inBounds(tx, ty)) continue;
-            var at = board.getPieceAt(tx, ty);
+            Piece at = board.getPieceAt(tx, ty);
             if (at == null || !at.getColor().equals(this.color)) {
                 out.add(board.toAlg(tx, ty));
             }

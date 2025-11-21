@@ -1,4 +1,4 @@
-package com.predixcode.core.rules;
+package com.predixcode.rules;
 
 import java.util.ArrayList;
 import java.util.List;

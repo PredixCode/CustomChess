@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.predixcode.core.board.Board;
-import com.predixcode.core.board.ClickOutcome;
-import com.predixcode.core.board.pieces.Piece;
-import com.predixcode.core.rules.Rule;
+import com.predixcode.board.Board;
+import com.predixcode.board.ClickOutcome;
+import com.predixcode.board.pieces.Piece;
+import com.predixcode.rules.Rule;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;

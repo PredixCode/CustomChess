@@ -1,9 +1,9 @@
-package com.predixcode.core.board.pieces;
+package com.predixcode.board.pieces;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import com.predixcode.core.board.Board;
+import com.predixcode.board.Board;
 
 public class Queen extends Piece {
     public Queen() { this.fenSymbol = "q"; }
@@ -40,7 +40,7 @@ public class Queen extends Piece {
         int nx = this.posX + dx;
         int ny = this.posY + dy;
         while (board.inBounds(nx, ny)) {
-            var at = board.getPieceAt(nx, ny);
+            Piece at = board.getPieceAt(nx, ny);
             if (at == null) {
                 out.add(board.toAlg(nx, ny));
             } else {

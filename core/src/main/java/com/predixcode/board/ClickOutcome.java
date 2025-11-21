@@ -1,8 +1,8 @@
-package com.predixcode.core.board;
+package com.predixcode.board;
 
 import java.util.Set;
 
-import com.predixcode.core.board.pieces.Piece;
+import com.predixcode.board.pieces.Piece;
 
 public final class ClickOutcome {
     public enum Type { NOOP, SELECT, MOVE_APPLIED, MOVE_REJECTED }

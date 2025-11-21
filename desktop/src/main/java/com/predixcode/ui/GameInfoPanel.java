@@ -2,8 +2,8 @@ package com.predixcode.ui;
 
 import java.util.List;
 
-import com.predixcode.core.board.Board;
-import com.predixcode.core.board.FenAdapter;
+import com.predixcode.board.Board;
+import com.predixcode.board.FenAdapter;
 
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
