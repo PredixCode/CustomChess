@@ -27,7 +27,7 @@ public final class FenAdapter {
 
         // dimensions
         List<String> rows = Arrays.asList(placement.split("/"));
-        board.setWidth(rows.getFirst().length());
+        board.setWidth(rows.get(0).length());
         board.setHeight(rows.size()); 
 
         // pieces
