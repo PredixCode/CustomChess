@@ -9,13 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,19 +21,20 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import com.predixcode.board.Board
 import com.predixcode.board.ClickOutcome
 import com.predixcode.board.pieces.Piece
 
 // ---------------------- Constants / visuals -----------------------
 
-// Same logical theme folder name used by the core module
 private const val THEME = "neo/upscale"
 
-// App background similar to chess.com dark theme
 private val APP_BG = Color(0xFF262522)
-
-// Board colors (matching the neo/upscale sprites)
 private val BOARD_LIGHT = Color(0xFFECECD0)
 private val BOARD_DARK = Color(0xFF749552)
 
@@ -66,8 +62,7 @@ private object PieceImageCache {
     private val cache: MutableMap<String, Bitmap?> = mutableMapOf()
 
     fun getBitmap(context: Context, corePath: String): Bitmap? {
-        // corePath from core is like "/pieces/neo/upscale/wP.png"
-        val normalized = corePath.removePrefix("/") // -> "pieces/neo/upscale/wP.png"
+        val normalized = corePath.removePrefix("/")
 
         return cache.getOrPut(normalized) {
             try {
@@ -85,8 +80,12 @@ private object PieceImageCache {
 
 // ---------------------- Game screen ------------------------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChessGameScreen(board: Board) {
+fun GameScreen(
+    board: Board,
+    onBack: () -> Unit          // <‑‑ NEW PARAM
+) {
     var uiState by remember { mutableStateOf(UiState()) }
     var boardVersion by remember { mutableIntStateOf(0) }
 
@@ -148,32 +147,107 @@ fun ChessGameScreen(board: Board) {
         }
     }
 
-    // Make this composable depend on boardVersion so it recomposes after moves
+    // Force recomposition when the board changes
     @Suppress("UNUSED_VARIABLE", "unused")
     val boardVersionSnapshot = boardVersion
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(APP_BG),
-        contentAlignment = Alignment.Center
-    ) {
-        val width = board.width
-        val height = board.height
+    Scaffold(
+        containerColor = APP_BG,
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Custom Chess",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "Playing with custom rules",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                navigationIcon = {                      // <‑‑ NEW
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to menu"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF2F2E29)
+                )
+            )
+        },
+        bottomBar = {
+            if (uiState.moveHistory.isNotEmpty()) {
+                MoveHistoryBar(uiState.moveHistory)
+            }
+        }
+    ) { innerPadding ->
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(APP_BG),
+            contentAlignment = Alignment.Center
+        ) {
+            val width = board.width
+            val height = board.height
 
-        // Use full width or height (whichever is limiting)
-        val tileSizeByWidth = maxWidth / width.toFloat()
-        val tileSizeByHeight = maxHeight / height.toFloat()
-        val tileSize = if (tileSizeByWidth < tileSizeByHeight) tileSizeByWidth else tileSizeByHeight
+            val tileSizeByWidth = maxWidth / width.toFloat()
+            val tileSizeByHeight = maxHeight / height.toFloat()
+            val tileSize = if (tileSizeByWidth < tileSizeByHeight) tileSizeByWidth else tileSizeByHeight
 
-        BoardWithCoordinates(
-            board = board,
-            uiState = uiState,
-            onSquareClick = onSquareClick,
-            tileSize = tileSize
-        )
+            BoardWithCoordinates(
+                board = board,
+                uiState = uiState,
+                onSquareClick = onSquareClick,
+                tileSize = tileSize
+            )
+        }
     }
 }
+
+@Composable
+private fun MoveHistoryBar(moves: List<String>) {
+    Surface(
+        tonalElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            item {
+                Text(
+                    text = "Moves",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            itemsIndexed(moves) { index, move ->
+                AssistChip(
+                    onClick = { /* no-op */ },
+                    label = { Text("${index + 1}. $move") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            }
+        }
+    }
+}
+
+// ---------------------- Board / piece composables ----------------
+// (unchanged, except for imports) – keep your existing implementations.
 
 @Composable
 fun BoardWithCoordinates(
@@ -200,9 +274,6 @@ fun BoardWithCoordinates(
 
                     val piece = board.getPieceAt(x, y)
 
-                    // Coordinates inside tiles:
-                    // - ranks (1..8) on the a‑file squares (x == 0), top‑left corner
-                    // - files (a..h) on the 1st rank squares (y == height-1), bottom‑right corner
                     val rankLabel: String? =
                         if (x == 0) (height - y).toString() else null
                     val fileChar: Char? =
@@ -245,7 +316,6 @@ fun BoardSquare(
         else -> baseColor
     }
 
-    // Coordinate text color is the "opposite" tile color for contrast
     val coordColor: Color = if (isLight) BOARD_DARK else BOARD_LIGHT
 
     Box(
@@ -255,7 +325,6 @@ fun BoardSquare(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // Piece sprite (fills the tile; artwork carries its own border/shadow)
         if (piece != null) {
             PieceImage(
                 piece = piece,
@@ -263,7 +332,6 @@ fun BoardSquare(
             )
         }
 
-        // Target dot over the piece
         if (isTarget) {
             Box(
                 modifier = Modifier
@@ -275,7 +343,6 @@ fun BoardSquare(
             )
         }
 
-        // Rank label (top‑left of a‑file squares)
         if (rankLabel != null) {
             Text(
                 text = rankLabel,
@@ -287,7 +354,6 @@ fun BoardSquare(
             )
         }
 
-        // File label (bottom‑right of 1st‑rank squares)
         if (fileChar != null) {
             Text(
                 text = fileChar.toString(),
