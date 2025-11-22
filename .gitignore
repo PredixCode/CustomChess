@@ -2,6 +2,7 @@
 .github/*
 .gradle/*
 .idea/*
+.keystore/*
 
 gradle/*
 build/*

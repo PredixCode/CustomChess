@@ -1,4 +1,5 @@
 .gradle/*
+release/baselineProfiles/
 
 bin/*
 build/*
