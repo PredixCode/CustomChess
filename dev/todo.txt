@@ -1,4 +1,3 @@
 - refactor piece logic
-- better info panel
+- better info panel for javafx version
 - local server: play with friends via same network
-- build to apk
