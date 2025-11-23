@@ -57,7 +57,7 @@ public final class ConfigMenuScreen {
         presetRow.setAlignment(Pos.CENTER_LEFT);
 
         // ---------------------------------------------------------------------
-        // Initial values from config / preset (match Android logic)
+        // Initial values from config
         // ---------------------------------------------------------------------
         ScenarioMeta currentPreset = presetBox.getSelectionModel().getSelectedItem();
 
@@ -79,11 +79,11 @@ public final class ConfigMenuScreen {
 
         int initialHeight = (config != null && config.boardHeight() > 0)
                 ? config.boardHeight()
-                : 8;
+                : 0;
 
         int initialWidth = (config != null && config.boardWidth() > 0)
                 ? config.boardWidth()
-                : 8;
+                : 0;
 
         boolean initialChess960 = (config != null) && config.chess960();
 
@@ -102,7 +102,7 @@ public final class ConfigMenuScreen {
         // ---------------------------------------------------------------------
 
         // Dimensions
-        Label dimsLabel = new Label("Dimensions");
+        Label dimsLabel = new Label("Dimensions (0=auto)");
 
         TextField heightField = new TextField();
         heightField.setPromptText("Height");
@@ -200,9 +200,13 @@ public final class ConfigMenuScreen {
             int height = parseIntOrDefault(heightField.getText(), 8);
             int width  = parseIntOrDefault(widthField.getText(), 8);
 
-            // Clamp to minimum sensible sizes; matches Android (min 5).
-            int safeHeight = Math.max(5, height);
-            int safeWidth  = Math.max(5, width);
+            int safeHeight = 0;
+            int safeWidth  = 0;
+            if (height != 0 && width != 0) {
+                safeHeight = Math.max(5, height);
+                safeWidth  = Math.max(5, width);
+            }
+            
 
             GameConfig cfg = new GameConfig(
                     fen,

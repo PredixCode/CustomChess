@@ -41,28 +41,4 @@ public record GameConfig(
              whiteMovesPerTurn, blackMovesPerTurn,
              0, 0, false);
     }
-
-    public GameConfig withBoardSize(int width, int height) {
-        return new GameConfig(
-                fenOverride,
-                bureaucratRule,
-                whiteMovesPerTurn,
-                blackMovesPerTurn,
-                width,
-                height,
-                chess960
-        );
-    }
-
-    public GameConfig withChess960(boolean enabled) {
-        return new GameConfig(
-                fenOverride,
-                bureaucratRule,
-                whiteMovesPerTurn,
-                blackMovesPerTurn,
-                boardWidth,
-                boardHeight,
-                enabled
-        );
-    }
 }

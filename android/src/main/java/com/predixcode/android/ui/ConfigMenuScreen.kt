@@ -237,10 +237,10 @@ fun ConfigMenuScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        // Dimensions (blank, disabled – no logic yet)
+                        // Dimensions
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = "Dimensions",
+                                text = "Dimensions (0=auto)",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -427,8 +427,13 @@ fun ConfigMenuScreen(
                             val width = parseIntOrDefault(widthText, 8)
 
                             // Clamp to minimum sensible sizes; FEN layer will also validate.
-                            val safeHeight = height.coerceAtLeast(5)
-                            val safeWidth = width.coerceAtLeast(5)
+                            val safeHeight = 0
+                            val safeWidth = 0
+                            if (height != 0 && width != 0) {
+                                val safeHeight = height.coerceAtLeast(5)
+                                val safeWidth = width.coerceAtLeast(5)
+                            }
+
 
                             val cfg = GameConfig(
                                 fenOverride,
