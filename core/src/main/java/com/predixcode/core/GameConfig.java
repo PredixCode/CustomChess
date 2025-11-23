@@ -17,6 +17,7 @@ public record GameConfig(
         int blackMovesPerTurn,
         int boardWidth,            // 0 = "auto from FEN"
         int boardHeight,           // 0 = "auto from FEN"
+        boolean fillExpandedFiles,
         boolean chess960
 ) {
     public GameConfig {
@@ -37,8 +38,10 @@ public record GameConfig(
                       boolean bureaucratRule,
                       int whiteMovesPerTurn,
                       int blackMovesPerTurn) {
+        
         this(fenOverride, bureaucratRule,
              whiteMovesPerTurn, blackMovesPerTurn,
-             0, 0, false);
+             0, 0, false,
+              false);
     }
 }

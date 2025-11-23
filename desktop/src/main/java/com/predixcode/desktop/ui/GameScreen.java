@@ -10,7 +10,6 @@ import java.util.Map;
 import com.predixcode.core.board.Board;
 import com.predixcode.core.board.MoveResult;
 import com.predixcode.core.board.pieces.Piece;
-import com.predixcode.core.rules.Rule;
 import com.predixcode.core.ui.BoardController;
 import com.predixcode.core.ui.BoardViewState;
 import com.predixcode.core.ui.ClickOutcome;
@@ -56,8 +55,7 @@ public class GameScreen extends Application {
     private static final double PADDING = 24; // space for coordinates
     private static final String THEME = "neo/upscale"; // folder under /pieces/
 
-    protected Board board;
-
+    private Board board;
     private BoardController boardController;
     private BoardViewState viewState;
 
@@ -78,8 +76,9 @@ public class GameScreen extends Application {
 
     private GameInfoPanel infoPanel;
 
-    public GameScreen(Board board) {
-        this.board = board;
+    public GameScreen(BoardController controller) {
+        this.boardController = controller;
+        this.board = controller.getBoard();
     }
 
     @Override
@@ -87,19 +86,9 @@ public class GameScreen extends Application {
         if (this.board == null) {
             throw new IllegalStateException("Board not initialized before GUI start");
         }
-        this.boardController = new BoardController(board);
         this.viewState = boardController.getViewState();
 
-        initGame();
         initGui(stage);
-    }
-
-    protected void initGame() {
-        board.ensureRules();
-        for (Rule r : board.getRules()) {
-            System.out.println("Board has rule: " + r.getClass().getSimpleName());
-            r.onGameStart(board);
-        }
     }
 
     protected void initGui(Stage stage) {

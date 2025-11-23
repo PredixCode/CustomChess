@@ -16,8 +16,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.predixcode.android.PRESETS
 import com.predixcode.core.GameConfig
+import com.predixcode.core.GamePresets.PRESETS
 import com.predixcode.core.ScenarioMeta
 
 
@@ -61,7 +61,9 @@ fun ConfigMenuScreen(
 
     val initialHeight: Int = config?.boardHeight() ?: 8
     val initialWidth: Int = config?.boardWidth() ?: 8
+    val initialFillExpanded: Boolean = config?.fillExpandedFiles() ?: false
     val initialChess960: Boolean = config?.chess960() ?: false
+
 
     var fenText by remember(selected, config) { mutableStateOf(initialFen) }
     var bureaucrat by remember(selected, config) { mutableStateOf(initialBureaucrat) }
@@ -76,6 +78,9 @@ fun ConfigMenuScreen(
     }
     var widthText by remember(selected, config) {
         mutableStateOf(initialWidth.toString())
+    }
+    var fillExpanded by remember(selected, config) {
+        mutableStateOf(initialFillExpanded)
     }
     var chess960 by remember(selected, config) {
         mutableStateOf(initialChess960)
@@ -270,6 +275,22 @@ fun ConfigMenuScreen(
                                         keyboardType = KeyboardType.Number
                                     )
                                 )
+
+                                // Toggle directly next to the fields
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = fillExpanded,
+                                        onCheckedChange = { fillExpanded = it }
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        text = "Fill extra files",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
 
@@ -442,6 +463,7 @@ fun ConfigMenuScreen(
                                 bMoves,
                                 safeWidth,
                                 safeHeight,
+                                fillExpanded,
                                 chess960
                             )
 

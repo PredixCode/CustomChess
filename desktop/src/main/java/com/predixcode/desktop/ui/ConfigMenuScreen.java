@@ -85,6 +85,8 @@ public final class ConfigMenuScreen {
                 ? config.boardWidth()
                 : 0;
 
+        boolean initialFillExpanded = (config != null) && config.fillExpandedFiles();
+
         boolean initialChess960 = (config != null) && config.chess960();
 
         // ---------------------------------------------------------------------
@@ -114,13 +116,18 @@ public final class ConfigMenuScreen {
         widthField.setPrefColumnCount(3);
         widthField.setText(String.valueOf(initialWidth));
 
+        CheckBox fillExpandedFilesBox = new CheckBox("Fill extra files");
+        fillExpandedFilesBox.setSelected(initialFillExpanded);
+
         HBox dimsRow = new HBox(8,
                 new Label("Height:"), heightField,
-                new Label("Width:"), widthField
+                new Label("Width:"), widthField,
+                fillExpandedFilesBox
         );
         dimsRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setMargin(fillExpandedFilesBox, new Insets(0, 0, 0, 8));
 
-        VBox dimsBox = new VBox(4, dimsLabel, dimsRow);
+        VBox dimsBox = new VBox(4, dimsLabel, dimsRow, fillExpandedFilesBox);
 
         // Moves per turn
         Label movesLabel = new Label("Moves per turn");
@@ -215,6 +222,7 @@ public final class ConfigMenuScreen {
                     bMoves,
                     safeWidth,
                     safeHeight,
+                    fillExpandedFilesBox.isSelected(),
                     chess960Chk.isSelected()
             );
 
