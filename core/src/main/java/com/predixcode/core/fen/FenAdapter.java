@@ -5,9 +5,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.predixcode.core.board.Board;
+import com.predixcode.core.board.colors.Color;
 import com.predixcode.core.board.pieces.King;
 import com.predixcode.core.board.pieces.Piece;
-import com.predixcode.core.colors.Color;
 
 public final class FenAdapter {
     private FenAdapter() {}

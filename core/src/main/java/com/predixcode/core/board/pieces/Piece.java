@@ -5,7 +5,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import com.predixcode.core.board.Board;
-import com.predixcode.core.colors.Color;
+import com.predixcode.core.board.colors.Color;
 
 public abstract class Piece {
     public int posX;

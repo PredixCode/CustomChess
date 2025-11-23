@@ -4,7 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.predixcode.core.board.Board;
-import com.predixcode.core.colors.Color;
+import com.predixcode.core.board.colors.Color;
 
 public class Pawn extends Piece {
 

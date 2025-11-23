@@ -1,9 +1,9 @@
 package com.predixcode.core.rules;
 
 import com.predixcode.core.board.Board;
+import com.predixcode.core.board.colors.Color;
 import com.predixcode.core.board.pieces.Pawn;
 import com.predixcode.core.board.pieces.Piece;
-import com.predixcode.core.colors.Color;
 
 /**
  * Turn rule where each side gets N moves per turn (can be different for White/Black).

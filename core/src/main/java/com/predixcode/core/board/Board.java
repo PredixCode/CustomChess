@@ -6,11 +6,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.predixcode.core.board.colors.Color;
 import com.predixcode.core.board.pieces.King;
 import com.predixcode.core.board.pieces.Pawn;
 import com.predixcode.core.board.pieces.Piece;
 import com.predixcode.core.board.pieces.Rook;
-import com.predixcode.core.colors.Color;
 import com.predixcode.core.fen.FenAdapter;
 import com.predixcode.core.rules.MoveContext;
 import com.predixcode.core.rules.Rule;

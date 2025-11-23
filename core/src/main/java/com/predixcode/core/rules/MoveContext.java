@@ -1,7 +1,7 @@
 package com.predixcode.core.rules;
 
+import com.predixcode.core.board.colors.Color;
 import com.predixcode.core.board.pieces.Piece;
-import com.predixcode.core.colors.Color;
 
 /**
  * Shared move state visible to all rules during a single move.
