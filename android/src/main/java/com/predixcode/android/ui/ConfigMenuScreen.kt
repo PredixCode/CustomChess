@@ -427,11 +427,11 @@ fun ConfigMenuScreen(
                             val width = parseIntOrDefault(widthText, 8)
 
                             // Clamp to minimum sensible sizes; FEN layer will also validate.
-                            val safeHeight = 0
-                            val safeWidth = 0
+                            var safeHeight = 0
+                            var safeWidth = 0
                             if (height != 0 && width != 0) {
-                                val safeHeight = height.coerceAtLeast(5)
-                                val safeWidth = width.coerceAtLeast(5)
+                                safeHeight = height.coerceAtLeast(5)
+                                safeWidth = width.coerceAtLeast(5)
                             }
 
 
