@@ -2,8 +2,10 @@ package com.predixcode.android
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -30,6 +32,7 @@ fun ConfigMenuScreen(
 ) {
     val effectivePresets = presets.ifEmpty { PRESETS }
     val initialPreset = selected ?: effectivePresets.first()
+    val scrollState = rememberScrollState()
 
     var preset by remember(selected, config) {
         mutableStateOf(initialPreset)
@@ -48,9 +51,6 @@ fun ConfigMenuScreen(
     val initialBureaucrat: Boolean =
         config?.bureaucratRule() ?: preset.isDefaultBureaucratRule
 
-    val initialMultiMove: Boolean =
-        config?.multipleMoveRule() ?: preset.isDefaultMultipleMoveRule
-
     val initialWhiteMoves: Int =
         config?.whiteMovesPerTurn() ?: preset.defaultWhiteMovesPerTurn
 
@@ -59,7 +59,6 @@ fun ConfigMenuScreen(
 
     var fenText by remember(selected, config) { mutableStateOf(initialFen) }
     var bureaucrat by remember(selected, config) { mutableStateOf(initialBureaucrat) }
-    var multiMove by remember(selected, config) { mutableStateOf(initialMultiMove) }
     var whiteMoves by remember(selected, config) {
         mutableStateOf(initialWhiteMoves.toString())
     }
@@ -112,8 +111,9 @@ fun ConfigMenuScreen(
                 modifier = Modifier
                     .weight(1f, fill = true)
                     .padding(top = 8.dp)
+                    .verticalScroll(scrollState)
             ) {
-                // Preset + FEN card
+                // Preset + FEN card (matches "Preset" then "FEN" in sketch)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -126,7 +126,7 @@ fun ConfigMenuScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Preset & position",
+                            text = "Preset",
                             style = MaterialTheme.typography.titleMedium
                         )
 
@@ -171,7 +171,6 @@ fun ConfigMenuScreen(
 
                                                 fenText = meta.defaultFen
                                                 bureaucrat = meta.isDefaultBureaucratRule
-                                                multiMove = meta.isDefaultMultipleMoveRule
                                                 whiteMoves = meta.defaultWhiteMovesPerTurn.toString()
                                                 blackMoves = meta.defaultBlackMovesPerTurn.toString()
                                             }
@@ -182,18 +181,149 @@ fun ConfigMenuScreen(
                         }
 
                         // FEN input
-                        OutlinedTextField(
-                            value = fenText,
-                            onValueChange = { fenText = it },
-                            label = { Text("Start position (FEN)") },
-                            placeholder = { Text("Leave empty to use preset's default FEN") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "FEN",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            OutlinedTextField(
+                                value = fenText,
+                                onValueChange = { fenText = it },
+                                label = { Text("Start position (FEN)") },
+                                placeholder = { Text("Leave empty to use preset's default FEN") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        }
                     }
                 }
 
-                // Rules card
+                // Rules card (reordered to match sketch: Dimensions → Moves per turn → Chess960)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Rules",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "Configure board dimensions, move counts, and variants.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Dimensions (blank, disabled – no logic yet)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Dimensions",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = "",
+                                    onValueChange = {},
+                                    label = { Text("Height") },
+                                    modifier = Modifier.width(96.dp),
+                                    singleLine = true,
+                                    enabled = false
+                                )
+
+                                OutlinedTextField(
+                                    value = "",
+                                    onValueChange = {},
+                                    label = { Text("Width") },
+                                    modifier = Modifier.width(96.dp),
+                                    singleLine = true,
+                                    enabled = false
+                                )
+                            }
+                        }
+
+                        // Moves per turn (White / Black)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Moves per turn",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = whiteMoves,
+                                    onValueChange = { whiteMoves = it },
+                                    label = { Text("White") },
+                                    modifier = Modifier.width(96.dp),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Number
+                                    )
+                                )
+
+                                OutlinedTextField(
+                                    value = blackMoves,
+                                    onValueChange = { blackMoves = it },
+                                    label = { Text("Black") },
+                                    modifier = Modifier.width(96.dp),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Number
+                                    )
+                                )
+                            }
+                        }
+
+                        // Chess960 – blank placeholder, disabled
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "Chess960 (Fischer Random)",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Randomize back ranks. (Not implemented yet.)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = false,
+                                onCheckedChange = {},
+                                enabled = false,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // Custom pieces card (Bureaucrat moved here, as in sketch)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -206,11 +336,11 @@ fun ConfigMenuScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Rules",
+                            text = "Custom pieces",
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            text = "Toggle additional rules similar to chess.com variants.",
+                            text = "Enable experimental custom piece rules.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -226,11 +356,11 @@ fun ConfigMenuScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "Bureaucrat rule",
+                                    text = "Bureaucrat",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = "Special capture behavior for the bureaucrat piece.",
+                                    text = "Adds the bureaucrat piece with a special capture rule.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -243,68 +373,6 @@ fun ConfigMenuScreen(
                                     checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
-                        }
-
-                        // Multi-move rule
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = "Multiple moves per turn",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = "Allow each side to move multiple times each turn.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = multiMove,
-                                onCheckedChange = { multiMove = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                                )
-                            )
-                        }
-
-                        // Moves per color
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = "Moves per turn (used when multi-move is enabled):",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OutlinedTextField(
-                                    value = whiteMoves,
-                                    onValueChange = { whiteMoves = it },
-                                    label = { Text("White") },
-                                    modifier = Modifier.width(96.dp),
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                                )
-
-                                OutlinedTextField(
-                                    value = blackMoves,
-                                    onValueChange = { blackMoves = it },
-                                    label = { Text("Black") },
-                                    modifier = Modifier.width(96.dp),
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                                )
-                            }
                         }
                     }
                 }
@@ -340,7 +408,6 @@ fun ConfigMenuScreen(
                             val cfg = GameConfig(
                                 fenOverride,
                                 bureaucrat,
-                                multiMove,
                                 wMoves,
                                 bMoves
                             )

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.predixcode.board.Board;
+import com.predixcode.board.MoveResult;
 import com.predixcode.board.pieces.Piece;
 import com.predixcode.rules.Rule;
 
@@ -173,22 +174,24 @@ public abstract class Gui extends Application {
         redrawHighlights();
 
         // 4) Handle move animation & info panel updates on MOVE_APPLIED
-        if (event.type == ClickOutcome.Type.MOVE_APPLIED) {
-            int[] from = event.from;
-            int[] to   = event.to;
+        if (event.type == ClickOutcome.Type.MOVE_APPLIED && event.moveResult != null) {
+            MoveResult mr = event.moveResult;
+            int[] from = mr.getFrom();
+            int[] to   = mr.getTo();
+
             if (from != null && to != null) {
                 Piece moved = board.getPieceAt(to[0], to[1]);
+                Piece captured = mr.getCaptured();
 
-                boolean capturedStillExists = (event.captured != null) && board.getPieces().contains(event.captured);
-                ImageView capturedNode = (!capturedStillExists && event.captured != null)
-                    ? pieceNodes.get(event.captured)
-                    : null;
+                boolean capturedStillExists = (captured != null) && board.getPieces().contains(captured);
+                ImageView capturedNode = (!capturedStillExists && captured != null)
+                        ? pieceNodes.get(captured)
+                        : null;
 
                 animateMove(moved, from[0], from[1], to[0], to[1], capturedNode);
 
-                // Only remove mapping when the captured piece is actually gone
-                if (event.captured != null && !capturedStillExists) {
-                    ImageView removed = pieceNodes.remove(event.captured);
+                if (captured != null && !capturedStillExists) {
+                    ImageView removed = pieceNodes.remove(captured);
                     if (removed != null) pieceLayer.getChildren().remove(removed);
                 }
             }

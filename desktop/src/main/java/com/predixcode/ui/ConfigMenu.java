@@ -61,26 +61,19 @@ public final class ConfigMenu {
 
         // Rule toggles
         CheckBox bureaucratChk = new CheckBox("Enable Bureaucrat rule");
-        CheckBox multiMoveChk  = new CheckBox("Enable multiple moves per turn");
 
         boolean initialBureaucrat = (config != null)
                 ? config.bureaucratRule()
                 : (currentPreset != null && currentPreset.isDefaultBureaucratRule());
-        boolean initialMultiMove = (config != null)
-                ? config.multipleMoveRule()
-                : (currentPreset != null && currentPreset.isDefaultMultipleMoveRule());
 
         bureaucratChk.setSelected(initialBureaucrat);
-        multiMoveChk.setSelected(initialMultiMove);
 
         VBox rulesBox = new VBox(4,
             new Label("Rules:"),
-            bureaucratChk,
-            multiMoveChk
+            bureaucratChk
         );
 
-        // Moves per color (used if multiMoveChk is true)
-        Label movesLabel = new Label("Moves per turn (if multi-move enabled):");
+        Label movesLabel = new Label("Moves per turn");
 
         TextField whiteMovesField = new TextField();
         whiteMovesField.setPromptText("White");
@@ -113,7 +106,6 @@ public final class ConfigMenu {
             if (newPreset == null) return;
             fenField.setText(newPreset.getDefaultFen());
             bureaucratChk.setSelected(newPreset.isDefaultBureaucratRule());
-            multiMoveChk.setSelected(newPreset.isDefaultMultipleMoveRule());
             whiteMovesField.setText(String.valueOf(newPreset.getDefaultWhiteMovesPerTurn()));
             blackMovesField.setText(String.valueOf(newPreset.getDefaultBlackMovesPerTurn()));
         });
@@ -133,7 +125,6 @@ public final class ConfigMenu {
             GameConfig cfg = new GameConfig(
                 fen,
                 bureaucratChk.isSelected(),
-                multiMoveChk.isSelected(),
                 wMoves,
                 bMoves
             );

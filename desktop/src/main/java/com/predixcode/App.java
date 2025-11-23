@@ -25,10 +25,10 @@ public class App extends Application {
     // Presets only: they just pre-fill the config screen
     private static final List<ScenarioMeta> PRESETS = List.of(
         // name, defaultFEN, bureaucrat, multiMove, whiteMoves, blackMoves
-        new ScenarioMeta("Standard",           STANDARD_FEN,   false, false, 1, 1),
-        new ScenarioMeta("Double move x2",     STANDARD_FEN,   false, true,  2, 2),
-        new ScenarioMeta("Bureaucrat",         BUREAUCRAT_FEN, true,  false, 1, 1),
-        new ScenarioMeta("Bureaucrat + DM x2", BUREAUCRAT_FEN, true,  true,  2, 2)
+        new ScenarioMeta("Standard",           STANDARD_FEN,   false, 1, 1),
+        new ScenarioMeta("Double move x2",     STANDARD_FEN,   false, 2, 2),
+        new ScenarioMeta("Bureaucrat",         BUREAUCRAT_FEN, true,  1, 1),
+        new ScenarioMeta("Bureaucrat + DM x2", BUREAUCRAT_FEN, true,  2, 2)
     );
 
     private ScenarioMeta selectedPreset = PRESETS.get(0);
@@ -37,7 +37,6 @@ public class App extends Application {
     private GameConfig currentConfig = new GameConfig(
         null,   // fenOverride
         false,  // bureaucratRule
-        false,  // multipleMoveRule
         1,      // whiteMovesPerTurn
         1       // blackMovesPerTurn
     );

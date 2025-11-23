@@ -98,13 +98,9 @@ public class BoardController {
 
             recordMoveInHistory(lastFromXY, lastToXY);
 
-            clearSelection(); // also clears legal targets
+            clearSelection();
 
-            return ClickOutcome.moveApplied(
-                copyXY(lastFromXY),
-                copyXY(lastToXY),
-                result.getCaptured()
-            );
+            return ClickOutcome.moveApplied(result);
         } catch (Exception ex) {
             clearSelection();
             lastError = ex.getMessage();

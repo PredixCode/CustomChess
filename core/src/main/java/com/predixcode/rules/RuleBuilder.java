@@ -30,14 +30,9 @@ public final class RuleBuilder {
         rules.add(new StandardEndConditionRule());
 
         // Turn system
-        if (cfg.multipleMoveRule()) {
-            int w = Math.max(1, cfg.whiteMovesPerTurn());
-            int b = Math.max(1, cfg.blackMovesPerTurn());
-            rules.add(new MultipleMoveTurnRule(w, b));
-        } else {
-            rules.add(new StandardTurnRule());
-        }
-
+        int w = Math.max(0, cfg.whiteMovesPerTurn());
+        int b = Math.max(0, cfg.blackMovesPerTurn());
+        rules.add(new DynamicMoveTurnRule(w, b));
         return rules;
     }
 
@@ -46,7 +41,7 @@ public final class RuleBuilder {
      * (optional convenience).
      */
     public static List<Rule> defaultRules() {
-        GameConfig cfg = new GameConfig(null, false, false, 1, 1);
+        GameConfig cfg = new GameConfig(null, false, 1, 1);
         return buildRules(cfg);
     }
 }

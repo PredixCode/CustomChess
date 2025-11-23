@@ -22,10 +22,10 @@ private const val BUREAUCRAT_FEN =
 // Presets only: they just pre-fill the config screen (same as PRESETS in App.java)
 val PRESETS: List<ScenarioMeta> = listOf(
     // name, defaultFEN, bureaucrat, multiMove, whiteMoves, blackMoves
-    ScenarioMeta("Standard",           STANDARD_FEN,   false, false, 1, 1),
-    ScenarioMeta("Double move x2",     STANDARD_FEN,   false, true,  2, 2),
-    ScenarioMeta("Bureaucrat",         BUREAUCRAT_FEN, true,  false, 1, 1),
-    ScenarioMeta("Bureaucrat + DM x2", BUREAUCRAT_FEN, true,  true,  2, 2)
+    ScenarioMeta("Standard",           STANDARD_FEN,   false, 1, 1),
+    ScenarioMeta("Double move x2",     STANDARD_FEN,   false,  2, 2),
+    ScenarioMeta("Bureaucrat",         BUREAUCRAT_FEN, true, 1, 1),
+    ScenarioMeta("Bureaucrat + DM x2", BUREAUCRAT_FEN, true,  2, 2)
 )
 
 // The last-used configuration (so the UI remembers choices)
@@ -33,7 +33,6 @@ val PRESETS: List<ScenarioMeta> = listOf(
 private val DEFAULT_CONFIG = GameConfig(
     null,   // fenOverride
     false,  // bureaucratRule
-    false,  // multipleMoveRule
     1,      // whiteMovesPerTurn
     1       // blackMovesPerTurn
 )
