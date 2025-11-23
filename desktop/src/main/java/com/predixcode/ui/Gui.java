@@ -53,7 +53,6 @@ public abstract class Gui extends Application {
     private static final String THEME = "neo/upscale"; // folder under /pieces/
 
     protected Board board;
-    protected String fenOverride;
 
     private BoardController boardController;
     private BoardViewState viewState;

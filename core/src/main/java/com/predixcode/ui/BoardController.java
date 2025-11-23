@@ -47,7 +47,6 @@ public class BoardController {
      * Main UI entry point: user clicked on board square (x,y).
      * Returns a ClickOutcome describing what happened (for
      * animation / feedback).
-     *
      * After calling this, ALWAYS call getViewState() to
      * re-render from the new state.
      */

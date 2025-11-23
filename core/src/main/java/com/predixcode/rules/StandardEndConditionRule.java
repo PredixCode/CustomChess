@@ -12,11 +12,11 @@ public class StandardEndConditionRule extends Rule {
         Color opponent = movingPiece.getColor().opposite();
         boolean opponentInCheck = board.isInCheck(opponent);
 
-        if (opponentInCheck && !board.hasAnyLegalMove(opponent)) {
+        if (opponentInCheck && board.hasNoLegalMoves(opponent)) {
             throw new IllegalStateException("Checkmate! " + movingPiece.getColor() + " wins.");
         }
 
-        if (!opponentInCheck && !board.hasAnyLegalMove(opponent)) {
+        if (!opponentInCheck && board.hasNoLegalMoves(opponent)) {
             throw new IllegalStateException("Stalemate!");
         }
     }

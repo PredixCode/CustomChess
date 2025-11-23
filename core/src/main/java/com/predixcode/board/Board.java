@@ -421,10 +421,6 @@ public class Board {
     //  Game state evaluation (check, mate, any-legal-moves)
     // =====================================================================
 
-    public boolean isCheckmate(Color color) {
-        return isInCheck(color) && !hasAnyLegalMove(color);
-    }
-
     public boolean isInCheck(Color color) {
         King k = getKing(color);
         int[] kingXY = (k != null) ? k.getXY() : null;
@@ -432,7 +428,7 @@ public class Board {
         return isSquareAttacked(color.opposite(), kingXY[0], kingXY[1]);
     }
 
-    public boolean hasAnyLegalMove(Color color) {
+    public boolean hasNoLegalMoves(Color color) {
         for (Piece p : pieces) {
             if (p.getColor() == null || !p.getColor().equals(color)) continue;
             Set<String> moves = p.getLegalMoves(this);
@@ -441,11 +437,11 @@ public class Board {
             for (String alg : moves) {
                 int[] toXY = fromAlg(alg);
                 if (!wouldLeaveOwnKingInCheck(p, p.getXY(), toXY)) {
-                    return true;
+                    return false;
                 }
             }
         }
-        return false;
+        return true;
     }
 
     // =====================================================================
