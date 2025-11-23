@@ -1,4 +1,7 @@
 - Simplify if possible
+
+- when modifying config fen should always live refresh
+
 - get rid of distiction between scenarios and game config, just prebuilt multiple GameConfigs as Scenarios
 - when a scenario is selected and altered, let the scenario box show Custom Scenario
 - local server: play with friends via same network
