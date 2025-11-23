@@ -11,7 +11,7 @@ java {
 }
 
 application {
-    mainClass = 'com.predixcode.App'
+    mainClass = 'com.predixcode.desktop.App'
 }
 
 dependencies {

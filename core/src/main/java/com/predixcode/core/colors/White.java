@@ -1,0 +1,15 @@
+package com.predixcode.core.colors;
+
+public class White extends Color {
+    
+    public White() {
+        this.colorName = "white";
+        this.colorSymbol = "w";
+        this.colorCode = 1;
+    }
+
+    @Override
+    public String formatSymbol(String s) {
+        return s.toUpperCase();
+    }
+}

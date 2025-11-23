@@ -2,15 +2,17 @@ package com.predixcode.android
 
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.*
-import com.predixcode.GameConfig
-import com.predixcode.ScenarioMeta
-import com.predixcode.board.Board
-import com.predixcode.rules.Rule
-import com.predixcode.rules.RuleBuilder
-import com.predixcode.ui.BoardController
-
+import com.predixcode.android.ui.ConfigMenuScreen
+import com.predixcode.android.ui.GameScreen
+import com.predixcode.core.GameConfig
+import com.predixcode.core.ScenarioMeta
+import com.predixcode.core.board.Board
+import com.predixcode.core.rules.Rule
+import com.predixcode.core.rules.RuleBuilder
+import com.predixcode.core.ui.BoardController
+import com.predixcode.core.fen.StartPositionService
 // -----------------------------------------------------------------
-// Constants / presets – mirror App.java
+// Constants / presets
 // -----------------------------------------------------------------
 
 private const val STANDARD_FEN =
@@ -21,7 +23,6 @@ private const val BUREAUCRAT_FEN =
 
 // Presets only: they just pre-fill the config screen (same as PRESETS in App.java)
 val PRESETS: List<ScenarioMeta> = listOf(
-    // name, defaultFEN, bureaucrat, multiMove, whiteMoves, blackMoves
     ScenarioMeta("Standard",           STANDARD_FEN,   false, 1, 1),
     ScenarioMeta("Double move x2",     STANDARD_FEN,   false,  2, 2),
     ScenarioMeta("Bureaucrat",         BUREAUCRAT_FEN, true, 1, 1),
@@ -31,10 +32,10 @@ val PRESETS: List<ScenarioMeta> = listOf(
 // The last-used configuration (so the UI remembers choices)
 // Mirrors App.currentConfig initial value.
 private val DEFAULT_CONFIG = GameConfig(
-    null,   // fenOverride
-    false,  // bureaucratRule
-    1,      // whiteMovesPerTurn
-    1       // blackMovesPerTurn
+    null,
+    false,
+    1,
+    1
 )
 
 sealed class AppScreen {
@@ -104,17 +105,18 @@ private fun startNewBoardFromConfig(
     preset: ScenarioMeta,
     cfg: GameConfig
 ): BoardController {
-    // App.createBoardFromConfig(preset, cfg)
     val fenOverride = cfg.fenOverride()
-    val fenToUse = if (fenOverride == null || fenOverride.isBlank()) {
+    val baseFen = if (fenOverride == null || fenOverride.isBlank()) {
         preset.defaultFen
     } else {
         fenOverride
     }
 
-    val board = Board.fromFen(fenToUse)
+    // Apply board-size + Chess960 rules from core
+    val finalFen = StartPositionService.buildStartingFen(baseFen, cfg)
 
-    // App.startNewGame: RuleBuilder.buildRules(currentConfig)
+    val board = Board.fromFen(finalFen)
+
     val rules: List<Rule> = RuleBuilder.buildRules(cfg)
     board.setRules(rules)
     board.ensureRules()
@@ -122,6 +124,5 @@ private fun startNewBoardFromConfig(
         rule.onGameStart(board)
     }
 
-    // Wrap the board in a controller, Android will render via BoardController + BoardViewState
     return BoardController(board)
 }

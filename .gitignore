@@ -1,7 +1,6 @@
 .vscode/*
 .github/*
 .gradle/*
-.idea/*
 .keystore/*
 
 gradle/*
