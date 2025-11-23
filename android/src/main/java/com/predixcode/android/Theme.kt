@@ -27,6 +27,24 @@ private val DarkColorScheme = darkColorScheme(
     outline = Color(0xFF4A4A3F),
 )
 
+/**
+ * Shared board UI defaults (colors + piece theme).
+ */
+object BoardUiDefaults {
+    // Piece sprite theme folder (matches desktop)
+    const val PieceTheme: String = "neo/upscale"
+
+    // Board background / tiles
+    val AppBackground: Color = Color(0xFF262522)
+    val LightSquare:   Color = Color(0xFFECECD0)
+    val DarkSquare:    Color = Color(0xFF749552)
+
+    // Highlights
+    val SelectHighlight:   Color = Color(0xBFE1E16E)
+    val LastMoveHighlight: Color = Color(0xBFC3CD5A)
+    val TargetDot:         Color = Color(0x2A616161)
+}
+
 @Composable
 fun Theme(content: @Composable () -> Unit) {
     MaterialTheme(

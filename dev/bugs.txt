@@ -1,1 +1,2 @@
-Bureacreat respawns at first available field
+Bureaucrat respawns at wrong tile (should respawn on random tiles)
+Castling doesn't move Rook

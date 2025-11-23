@@ -1,4 +1,4 @@
-package com.predixcode.board;
+package com.predixcode.ui;
 
 import java.util.Set;
 

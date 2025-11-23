@@ -13,7 +13,7 @@ public class StandardMovementRule extends Rule {
         int[] fromXY = ctx.fromXY;
         int[] toXY   = ctx.toXY;
 
-        // --- Detect capture ---
+        // Detect if there is a piece on the target square (regular capture case).
         boolean isCapture = board.isSquareOccupied(toXY);
 
         // --- En passant: pawn moves diagonally into empty square ---
@@ -21,29 +21,25 @@ public class StandardMovementRule extends Rule {
                 && fromXY[0] != toXY[0]
                 && board.isEmpty(toXY[0], toXY[1])) {
 
-            boolean epDone = board.performEnPassantIfApplicable(movingPiece, fromXY, toXY);
+            boolean epDone = board.performEnPassantIfApplicable(movingPiece, fromXY, toXY, ctx);
             if (epDone) {
                 ctx.isEnPassant = true;
                 ctx.isCapture = true;
-                ctx.capturedPiece = getLastCapturedPiece(board);
-                ctx.captureHandled = true; // captured pawn already removed inside performEnPassant
+                ctx.captureHandled = true; // EP pawn already removed inside performEnPassant
                 return;
             }
         }
 
-        // --- Castling rook move (rook motion only; king move is in core) ---
+        // --- Castling detection (king moves two files horizontally) ---
         if (movingPiece instanceof King && board.isCastlingMove(fromXY, toXY)) {
             ctx.isCastling = true;
-            // Rook is moved inside handleCastling, which we call AFTER king move:
-            // We'll call handleCastling in afterMove.
         }
 
-        // Regular capture (non-EP, non-special)
+        // --- Regular capture (non-EP, non-special) ---
         if (isCapture) {
             ctx.isCapture = true;
             ctx.capturedPiece = board.getPieceAt(toXY[0], toXY[1]);
-            // Do NOT remove yet; we let afterMove handle that so other rules (e.g. Bureaucrat)
-            // can inspect ctx.capturedPiece first.
+            // Actual removal happens in afterMove via handleCaptureIfAny(...)
         }
     }
 
@@ -58,21 +54,19 @@ public class StandardMovementRule extends Rule {
             board.handleCastling(king, fromXY, toXY);
         }
 
-        // --- Handle standard capture if not handled by another rule ---
+        // --- Handle standard capture if not handled by another rule (non-EP) ---
         if (ctx.isCapture && !ctx.captureHandled) {
-            board.handleCaptureIfAny(toXY);
-            ctx.capturedPiece = getLastCapturedPiece(board);
+            board.handleCaptureIfAny(toXY, ctx);
             ctx.captureHandled = true;
         }
 
-        // --- Update special move states: EP target & castling rights ---
+        // --- Update EP target & castling rights ---
         board.updateEnPassantTargetIfApplicable(movingPiece, fromXY, toXY);
-        board.updateCastlingRights(movingPiece, fromXY[0], fromXY[1], toXY[0], toXY[1], ctx.isCapture);
-    }
-
-    private static Piece getLastCapturedPiece(Board board) {
-        // You can either expose a getter on Board or keep using lastCapturedPiece internally
-        // For now we don't strictly need it if only ClickOutcome cares about last capture.
-        return null; // optional: fill in if you expose it
+        board.updateCastlingRights(
+            movingPiece,
+            fromXY[0], fromXY[1],
+            toXY[0],   toXY[1],
+            ctx.isCapture
+        );
     }
 }

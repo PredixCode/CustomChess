@@ -31,4 +31,14 @@ public final class MoveContext {
         this.toXY   = toXY;
         this.movingColor = piece.getColor();
     }
+
+    // --- New helper methods used by Board ---
+
+    public Piece getCapturedPiece() {
+        return capturedPiece;
+    }
+
+    public void setCapturedPiece(Piece capturedPiece) {
+        this.capturedPiece = capturedPiece;
+    }
 }

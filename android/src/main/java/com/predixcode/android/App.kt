@@ -7,6 +7,7 @@ import com.predixcode.ScenarioMeta
 import com.predixcode.board.Board
 import com.predixcode.rules.Rule
 import com.predixcode.rules.RuleBuilder
+import com.predixcode.ui.BoardController
 
 // -----------------------------------------------------------------
 // Constants / presets – mirror App.java
@@ -47,13 +48,14 @@ sealed class AppScreen {
 // -----------------------------------------------------------------
 
 @Composable
-fun ChessApp() {
+fun App() {
     val activity = LocalActivity.current
 
-    // Same top-level state as App.java
+    // Same top-level state as App.java, but we now persist the controller,
+    // not just the raw Board.
     var selectedPreset by remember { mutableStateOf(PRESETS[0]) }
     var currentConfig by remember { mutableStateOf(DEFAULT_CONFIG) }
-    var activeBoard by remember { mutableStateOf<Board?>(null) }
+    var activeController by remember { mutableStateOf<BoardController?>(null) }
     var screen by remember { mutableStateOf<AppScreen>(AppScreen.Menu) }
 
     when (screen) {
@@ -62,15 +64,15 @@ fun ChessApp() {
                 presets = PRESETS,
                 selected = selectedPreset,
                 config = currentConfig,
-                canResume = activeBoard != null,
+                canResume = activeController != null,
                 onStart = { preset, cfg ->
                     selectedPreset = preset
                     currentConfig = cfg
-                    activeBoard = startNewBoardFromConfig(preset, cfg)
+                    activeController = startNewBoardFromConfig(preset, cfg)
                     screen = AppScreen.Game
                 },
                 onResume = {
-                    if (activeBoard != null) {
+                    if (activeController != null) {
                         screen = AppScreen.Game
                     }
                 },
@@ -81,19 +83,19 @@ fun ChessApp() {
         }
 
         is AppScreen.Game -> {
-            val board = activeBoard
-            if (board != null) {
+            val controller = activeController
+            if (controller != null) {
                 GameScreen(
-                    board = board,
-                    onBack = { screen = AppScreen.Menu }   // <‑‑ NEW
+                    controller = controller,
+                    onBack = { screen = AppScreen.Menu }
                 )
             } else {
+                // If somehow we got here without a controller, go back to menu
                 screen = AppScreen.Menu
             }
         }
     }
 }
-
 
 // -----------------------------------------------------------------
 // Logic equivalent of App.startNewGame + createBoardFromConfig
@@ -102,7 +104,7 @@ fun ChessApp() {
 private fun startNewBoardFromConfig(
     preset: ScenarioMeta,
     cfg: GameConfig
-): Board {
+): BoardController {
     // App.createBoardFromConfig(preset, cfg)
     val fenOverride = cfg.fenOverride()
     val fenToUse = if (fenOverride == null || fenOverride.isBlank()) {
@@ -121,5 +123,6 @@ private fun startNewBoardFromConfig(
         rule.onGameStart(board)
     }
 
-    return board
+    // Wrap the board in a controller, Android will render via BoardController + BoardViewState
+    return BoardController(board)
 }

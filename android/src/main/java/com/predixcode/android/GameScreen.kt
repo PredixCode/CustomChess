@@ -8,7 +8,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,38 +25,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import com.predixcode.board.Board
-import com.predixcode.board.ClickOutcome
+import com.predixcode.ui.ClickOutcome
 import com.predixcode.board.pieces.Piece
-
-// ---------------------- Constants / visuals -----------------------
-
-private const val THEME = "neo/upscale"
-
-private val APP_BG = Color(0xFF262522)
-private val BOARD_LIGHT = Color(0xFFECECD0)
-private val BOARD_DARK = Color(0xFF749552)
-
-// Highlights
-private val SELECT_COLOR = Color(0xBFE1E16E)
-private val LAST_MOVE_COLOR = Color(0xBFC3CD5A)
-private val TARGET_DOT_COLOR = Color(0x2A616161)
-
-// ---------------------- State models -----------------------------
-
-data class SquarePos(val x: Int, val y: Int)
-
-data class UiState(
-    val selected: SquarePos? = null,
-    val legalTargets: Set<SquarePos> = emptySet(),
-    val lastFrom: SquarePos? = null,
-    val lastTo: SquarePos? = null,
-    val moveHistory: List<String> = emptyList()
-)
+import com.predixcode.ui.BoardController
+import com.predixcode.ui.BoardViewState
 
 // ---------------------- Piece image cache ------------------------
 
@@ -82,76 +59,29 @@ private object PieceImageCache {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
-    board: Board,
-    onBack: () -> Unit          // <‑‑ NEW PARAM
+    controller: BoardController,
+    onBack: () -> Unit
 ) {
-    var uiState by remember { mutableStateOf(UiState()) }
-    var boardVersion by remember { mutableIntStateOf(0) }
+    val board: Board = remember { controller.board }
+
+    var viewState by remember { mutableStateOf(controller.viewState) }
 
     val onSquareClick: (Int, Int) -> Unit = { x, y ->
-        val out: ClickOutcome = board.handleSquareClick(x, y)
+        val event: ClickOutcome = controller.handleClick(x, y)
+        viewState = controller.viewState
 
-        when (out.type) {
-            ClickOutcome.Type.SELECT -> {
-                val selectedArray = out.selected
-                val selected = selectedArray?.let { SquarePos(it[0], it[1]) }
-
-                val targetStrings: Set<String> = out.legalTargets ?: emptySet()
-                val targetSquares: Set<SquarePos> = targetStrings
-                    .map { alg ->
-                        val coords = board.fromAlg(alg)
-                        SquarePos(coords[0], coords[1])
-                    }
-                    .toSet()
-
-                uiState = uiState.copy(
-                    selected = selected,
-                    legalTargets = targetSquares
-                )
-            }
-
+        // If desired, you can react to MOVE_REJECTED with a Snackbar using viewState.lastError.
+        when (event.type) {
             ClickOutcome.Type.MOVE_APPLIED -> {
-                val fromArray = out.from
-                val toArray = out.to
-                val from = fromArray?.let { SquarePos(it[0], it[1]) }
-                val to = toArray?.let { SquarePos(it[0], it[1]) }
-
-                val fromAlg = from?.let { board.toAlg(it.x, it.y) }
-                val toAlg = to?.let { board.toAlg(it.x, it.y) }
-
-                val newHistory =
-                    if (fromAlg != null && toAlg != null)
-                        uiState.moveHistory + "$fromAlg-$toAlg"
-                    else
-                        uiState.moveHistory
-
-                uiState = uiState.copy(
-                    selected = null,
-                    legalTargets = emptySet(),
-                    lastFrom = from,
-                    lastTo = to,
-                    moveHistory = newHistory
-                )
-
-                boardVersion++
+                // Android currently doesn't animate pieces; the recomposition
+                // caused by viewState update is enough.
             }
-
-            ClickOutcome.Type.MOVE_REJECTED,
-            ClickOutcome.Type.NOOP -> {
-                uiState = uiState.copy(
-                    selected = null,
-                    legalTargets = emptySet()
-                )
-            }
+            else -> Unit
         }
     }
 
-    // Force recomposition when the board changes
-    @Suppress("UNUSED_VARIABLE", "unused")
-    val boardVersionSnapshot = boardVersion
-
     Scaffold(
-        containerColor = APP_BG,
+        containerColor = BoardUiDefaults.AppBackground,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -167,7 +97,7 @@ fun GameScreen(
                         )
                     }
                 },
-                navigationIcon = {                      // <‑‑ NEW
+                navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -176,13 +106,13 @@ fun GameScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF2F2E29)
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         },
         bottomBar = {
-            if (uiState.moveHistory.isNotEmpty()) {
-                MoveHistoryBar(uiState.moveHistory)
+            if (viewState.moveHistory.isNotEmpty()) {
+                MoveHistoryBar(viewState.moveHistory)
             }
         }
     ) { innerPadding ->
@@ -190,7 +120,7 @@ fun GameScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(APP_BG),
+                .background(BoardUiDefaults.AppBackground),
             contentAlignment = Alignment.Center
         ) {
             val width = board.width
@@ -202,7 +132,7 @@ fun GameScreen(
 
             BoardWithCoordinates(
                 board = board,
-                uiState = uiState,
+                viewState = viewState,
                 onSquareClick = onSquareClick,
                 tileSize = tileSize
             )
@@ -246,30 +176,37 @@ private fun MoveHistoryBar(moves: List<String>) {
 }
 
 // ---------------------- Board / piece composables ----------------
-// (unchanged, except for imports) – keep your existing implementations.
 
 @Composable
 fun BoardWithCoordinates(
     board: Board,
-    uiState: UiState,
+    viewState: BoardViewState,
     onSquareClick: (x: Int, y: Int) -> Unit,
     tileSize: Dp
 ) {
     val width = board.width
     val height = board.height
 
+    val selected = viewState.selectedSquare
+    val lastFrom = viewState.lastFrom
+    val lastTo = viewState.lastTo
+    val legalTargets = viewState.legalTargets
+
     Column {
         for (y in 0 until height) {
             Row {
                 for (x in 0 until width) {
-                    val pos = SquarePos(x, y)
                     val isLight = (x + y) % 2 == 0
-                    val baseColor = if (isLight) BOARD_LIGHT else BOARD_DARK
+                    val baseColor = if (isLight) BoardUiDefaults.LightSquare else BoardUiDefaults.DarkSquare
 
-                    val isSelected = uiState.selected == pos
+                    val isSelected =
+                        selected != null && selected.size >= 2 && selected[0] == x && selected[1] == y
                     val isLastMoveSquare =
-                        (uiState.lastFrom == pos) || (uiState.lastTo == pos)
-                    val isTarget = uiState.legalTargets.contains(pos)
+                        (lastFrom != null && lastFrom.size >= 2 && lastFrom[0] == x && lastFrom[1] == y) ||
+                                (lastTo != null && lastTo.size >= 2 && lastTo[0] == x && lastTo[1] == y)
+
+                    val thisAlg = board.toAlg(x, y)
+                    val isTarget = legalTargets.contains(thisAlg)
 
                     val piece = board.getPieceAt(x, y)
 
@@ -310,12 +247,12 @@ fun BoardSquare(
     onClick: () -> Unit
 ) {
     val backgroundColor = when {
-        isSelected -> SELECT_COLOR
-        isLastMove -> LAST_MOVE_COLOR
+        isSelected -> BoardUiDefaults.SelectHighlight
+        isLastMove -> BoardUiDefaults.LastMoveHighlight
         else -> baseColor
     }
 
-    val coordColor: Color = if (isLight) BOARD_DARK else BOARD_LIGHT
+    val coordColor: Color = if (isLight) BoardUiDefaults.DarkSquare else BoardUiDefaults.LightSquare
 
     Box(
         modifier = Modifier
@@ -336,7 +273,7 @@ fun BoardSquare(
                 modifier = Modifier
                     .size(tileSize * 0.25f)
                     .background(
-                        color = TARGET_DOT_COLOR,
+                        color = BoardUiDefaults.TargetDot,
                         shape = CircleShape
                     )
             )
@@ -372,7 +309,7 @@ fun PieceImage(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val imagePath = remember(piece) { piece.getImagePath(THEME) ?: "" }
+    val imagePath = remember(piece) { piece.getImagePath(BoardUiDefaults.PieceTheme) ?: "" }
 
     if (imagePath.isEmpty()) return
 

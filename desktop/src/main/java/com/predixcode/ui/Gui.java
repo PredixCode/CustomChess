@@ -3,14 +3,11 @@ package com.predixcode.ui;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.predixcode.board.Board;
-import com.predixcode.board.ClickOutcome;
 import com.predixcode.board.pieces.Piece;
 import com.predixcode.rules.Rule;
 
@@ -44,6 +41,11 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+/**
+ * JavaFX GUI for the chess board, using BoardController + BoardViewState.
+ * All click / selection / move-history logic lives in BoardController.
+ * This class is only responsible for visual rendering and animations.
+ */
 public abstract class Gui extends Application {
 
     private static final double TILE = 88; // tile size in px
@@ -51,7 +53,10 @@ public abstract class Gui extends Application {
     private static final String THEME = "neo/upscale"; // folder under /pieces/
 
     protected Board board;
-    protected String fenOverride; 
+    protected String fenOverride;
+
+    private BoardController boardController;
+    private BoardViewState viewState;
 
     private Rectangle[][] squares;
     private Scene gameScene;      // the active game scene
@@ -62,18 +67,12 @@ public abstract class Gui extends Application {
 
     private Runnable backToMenuHandler;
 
-    // Selection and last move tracking
-    private int[] selected = null; // [x, y] board coords
-    private Set<String> legalTargets = new HashSet<>();
-    private int[] lastFrom = null, lastTo = null;
-
     private static final Paint BOARD_LIGHT = Paint.valueOf("#ececd0");
     private static final Paint BOARD_DARK  = Paint.valueOf("#749552");
     private final Paint selectColor = Paint.valueOf("#F6F66980"); // translucent yellow
-    private final Paint lastMoveColor = Paint.valueOf("#f6f6693b");;
+    private final Paint lastMoveColor = Paint.valueOf("#f6f6693b");
     private final Paint targetDotColor = Paint.valueOf("#6161612a");
 
-    private final List<String> moveHistory = new ArrayList<>();
     private GameInfoPanel infoPanel;
 
     @Override
@@ -81,6 +80,9 @@ public abstract class Gui extends Application {
         if (this.board == null) {
             throw new IllegalStateException("Board not initialized before GUI start");
         }
+        this.boardController = new BoardController(board);
+        this.viewState = boardController.getViewState();
+
         initGame();
         initGui(stage);
     }
@@ -125,7 +127,7 @@ public abstract class Gui extends Application {
         root.setCenter(center);
         root.setRight(infoPanel);
 
-        // Add a top bar with "Go Back" button
+        // Top bar with "Go Back" button
         HBox topBar = new HBox();
         topBar.setAlignment(Pos.CENTER_LEFT);
         topBar.setPadding(new Insets(8));
@@ -158,67 +160,49 @@ public abstract class Gui extends Application {
 
         loadPieces();
         refreshPieces();
-        infoPanel.refresh(board, moveHistory);
+        infoPanel.refresh(board, viewState.getMoveHistory());
+        redrawHighlights();
     }
 
     protected void onSquareClick(int x, int y) {
-        clearHighlights();
+        // 1) Let controller update its internal state and return event for animation
+        ClickOutcome event = boardController.handleClick(x, y);
+        // 2) Refresh viewState snapshot
+        this.viewState = boardController.getViewState();
 
-        ClickOutcome out = board.handleSquareClick(x, y);
-        System.out.println(out.type.name());
+        // 3) Redraw highlights based on viewState (selection, targets, last move)
+        redrawHighlights();
 
-        switch (out.type) {
-            case SELECT -> {
-                // purely visual; Board owns the true selection/targets
-                selected = out.selected;
-                legalTargets = out.legalTargets != null ? out.legalTargets : Set.of();
+        // 4) Handle move animation & info panel updates on MOVE_APPLIED
+        if (event.type == ClickOutcome.Type.MOVE_APPLIED) {
+            int[] from = event.from;
+            int[] to   = event.to;
+            if (from != null && to != null) {
+                Piece moved = board.getPieceAt(to[0], to[1]);
 
-                if (selected != null) {
-                    highlightSelection(selected[0], selected[1]);
-                }
-                if (legalTargets != null && !legalTargets.isEmpty()) {
-                    highlightTargets(legalTargets);
-                }
-                // Keep last move shading
-                highlightLastMove(lastFrom, lastTo);
-            }
-
-            case MOVE_APPLIED -> {
-                lastFrom = out.from;
-                lastTo   = out.to;
-
-                Piece moved = board.getPieceAt(lastTo[0], lastTo[1]);
-
-                boolean capturedStillExists = (out.captured != null) && board.getPieces().contains(out.captured);
-                ImageView capturedNode = (!capturedStillExists && out.captured != null)
-                    ? pieceNodes.get(out.captured)
+                boolean capturedStillExists = (event.captured != null) && board.getPieces().contains(event.captured);
+                ImageView capturedNode = (!capturedStillExists && event.captured != null)
+                    ? pieceNodes.get(event.captured)
                     : null;
 
-                animateMove(moved, lastFrom[0], lastFrom[1], lastTo[0], lastTo[1], capturedNode);
+                animateMove(moved, from[0], from[1], to[0], to[1], capturedNode);
 
                 // Only remove mapping when the captured piece is actually gone
-                if (out.captured != null && !capturedStillExists) {
-                    ImageView removed = pieceNodes.remove(out.captured);
+                if (event.captured != null && !capturedStillExists) {
+                    ImageView removed = pieceNodes.remove(event.captured);
                     if (removed != null) pieceLayer.getChildren().remove(removed);
                 }
-
-                // Record + UI
-                String ply = board.toAlg(lastFrom[0], lastFrom[1]) + "-" + board.toAlg(lastTo[0], lastTo[1]);
-                moveHistory.add(ply);
-                infoPanel.refresh(board, moveHistory);
-                highlightLastMove(lastFrom, lastTo);
             }
 
-            case MOVE_REJECTED, NOOP -> {
-                // Optionally log out.error somewhere (toast/console)
-                highlightLastMove(lastFrom, lastTo);
-            }
+            infoPanel.refresh(board, viewState.getMoveHistory());
         }
+
+        // You could also use viewState.getLastError() for a toast / dialog if MOVE_REJECTED.
     }
 
     private void goBackToMenu() {
-    if (backToMenuHandler != null) {
-        backToMenuHandler.run();
+        if (backToMenuHandler != null) {
+            backToMenuHandler.run();
         }
     }
 
@@ -300,7 +284,7 @@ public abstract class Gui extends Application {
 
             DropShadow ds = new DropShadow();
             ds.setRadius(8);
-            ds.setColor(javafx.scene.paint.Color.web("#00000040")); // JavaFX Color
+            ds.setColor(Color.web("#00000040"));
             iv.setEffect(ds);
 
             int x = p.posX;
@@ -356,10 +340,10 @@ public abstract class Gui extends Application {
         for (Piece p : board.getPieces()) {
             ImageView iv = pieceNodes.get(p);
             if (iv != null) {
-                ensureSpriteUpToDate(p, iv);           // <- refresh sprite if color/type changed
-                placeNodeAt(iv, p.posX, p.posY);       // or p.getXY()[0/1] if you use getters
+                ensureSpriteUpToDate(p, iv);
+                placeNodeAt(iv, p.posX, p.posY);
                 if (!pieceLayer.getChildren().contains(iv)) {
-                    pieceLayer.getChildren().add(iv);  // <- ensure visible if it was removed
+                    pieceLayer.getChildren().add(iv);
                 }
             }
         }
@@ -376,8 +360,7 @@ public abstract class Gui extends Application {
     }
 
     private Image missingPiecePlaceholder() {
-        WritableImage img;
-        img = new WritableImage((int)(TILE * 0.9), (int)(TILE * 0.9));
+        WritableImage img = new WritableImage((int)(TILE * 0.9), (int)(TILE * 0.9));
         for (int y = 0; y < img.getHeight(); y++) {
             for (int x = 0; x < img.getWidth(); x++) {
                 img.getPixelWriter().setArgb(x, y, 0xFFCCCCCC); // light gray opaque
@@ -387,9 +370,9 @@ public abstract class Gui extends Application {
     }
 
     private void ensureSpriteUpToDate(Piece p, ImageView iv) {
-        String wanted = p.getImagePath(THEME); // depends on current color+symbol
+        String wanted = p.getImagePath(THEME);
         Object cur = iv.getProperties().get("imgKey");
-        if (cur == null || !wanted.equals(cur)) {
+        if (!wanted.equals(cur)) {
             iv.setImage(loadImageFor(p));
             iv.getProperties().put("imgKey", wanted);
         }
@@ -407,7 +390,7 @@ public abstract class Gui extends Application {
         Timeline tl = new Timeline();
         int time = 200;
 
-        // Fade captured AFTER a successful move (we call this only post-move)
+        // Fade captured AFTER a successful move
         if (capturedNode != null) {
             FadeTransition fade = new FadeTransition(Duration.millis(120), capturedNode);
             fade.setFromValue(1.0);
@@ -434,10 +417,6 @@ public abstract class Gui extends Application {
         tl.play();
     }
 
-    public void setFenOverride(String fenOverride) {
-        this.fenOverride = fenOverride;
-    }
-
     public Scene getGameScene() {
         return gameScene;
     }
@@ -454,34 +433,29 @@ public abstract class Gui extends Application {
         iv.setLayoutY(snapY(y));
     }
 
-    private void clearHighlights() {
+    /**
+     * Clears and redraws highlights based on the current viewState.
+     */
+    private void redrawHighlights() {
         highlightLayer.getChildren().clear();
-        // Repaint base squares (keep last move shading)
         repaintBoard();
-        if (lastFrom != null && lastTo != null) {
-            shadeSquare(lastFrom[0], lastFrom[1], lastMoveColor);
-            shadeSquare(lastTo[0], lastTo[1], lastMoveColor);
+
+        // Last move shading
+        int[] from = viewState.getLastFrom();
+        int[] to   = viewState.getLastTo();
+        if (from != null && to != null) {
+            shadeSquare(from[0], from[1], lastMoveColor);
+            shadeSquare(to[0],   to[1],   lastMoveColor);
         }
-    }
 
-    private void highlightSelection(int x, int y) {
-        shadeSquare(x, y, selectColor);
-    }
+        // Selection
+        int[] sel = viewState.getSelectedSquare();
+        if (sel != null) {
+            shadeSquare(sel[0], sel[1], selectColor);
+        }
 
-    private void highlightLastMove(int[] from, int[] to) {
-        if (from == null || to == null) return;
-        shadeSquare(from[0], from[1], lastMoveColor);
-        shadeSquare(to[0], to[1], lastMoveColor);
-    }
-
-    private void shadeSquare(int x, int y, Paint color) {
-        Rectangle r = new Rectangle(x * TILE, y * TILE, TILE, TILE);
-        r.setFill(color);
-        highlightLayer.getChildren().add(r);
-    }
-
-    private void highlightTargets(Set<String> targets) {
-        for (String alg : targets) {
+        // Legal targets
+        for (String alg : viewState.getLegalTargets()) {
             int[] xy = board.fromAlg(alg);
             double cx = xy[0] * TILE + TILE / 2.0;
             double cy = xy[1] * TILE + TILE / 2.0;
@@ -489,5 +463,11 @@ public abstract class Gui extends Application {
             dot.setFill(targetDotColor);
             highlightLayer.getChildren().add(dot);
         }
+    }
+
+    private void shadeSquare(int x, int y, Paint color) {
+        Rectangle r = new Rectangle(x * TILE, y * TILE, TILE, TILE);
+        r.setFill(color);
+        highlightLayer.getChildren().add(r);
     }
 }
