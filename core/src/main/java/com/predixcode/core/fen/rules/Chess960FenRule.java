@@ -11,7 +11,6 @@ import com.predixcode.core.fen.FenUtils;
 
 /**
  * Chess960 variant of BoardSizeFenRule.
- *
  * Pipeline:
  *   1) Use BoardSizeFenRule's logic to resize the board non-destructively
  *      (only add/remove empty ranks/files when possible).
@@ -21,7 +20,6 @@ import com.predixcode.core.fen.FenUtils;
  *         - king somewhere between the two rooks
  *         - at least one queen if there is enough room
  *         - remaining squares are knights
- *
  * Only the *back ranks* (one for white, one for black) are overwritten.
  * All other ranks are preserved exactly as in the resized position.
  */

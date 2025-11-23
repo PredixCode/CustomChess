@@ -2,11 +2,9 @@ package com.predixcode.core;
 
 /**
  * High-level configuration of a game, coming from the config UI.
- *
  * boardWidth / boardHeight:
  *   0  => "use whatever the FEN implies" (no resize)
  *  >0  => explicitly resize the starting position to this size.
- *
  * chess960:
  *   true  => randomize starting back rank (and mirror it) in a Chess960 style.
  */

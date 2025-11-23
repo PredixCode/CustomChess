@@ -55,8 +55,8 @@ public class GameScreen extends Application {
     private static final double PADDING = 24; // space for coordinates
     private static final String THEME = "neo/upscale"; // folder under /pieces/
 
-    private Board board;
-    private BoardController boardController;
+    private final Board board;
+    private final BoardController boardController;
     private BoardViewState viewState;
 
     private Rectangle[][] squares;

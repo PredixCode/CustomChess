@@ -12,17 +12,14 @@ import com.predixcode.core.fen.FenUtils;
 /**
  * Resizes a position to a requested board width / height while preserving
  * the existing layout as much as possible.
- *
  * Width:
  *  - Grows by inserting new files around the existing ones:
  *      first on the right, then on the left, then right, then left...
  *    so the original columns remain roughly centered.
  *  - Shrinks only if the columns being removed are completely empty.
- *
  * Height:
  *  - Grows by inserting empty ranks around the vertical middle.
  *  - Shrinks only by removing completely empty ranks.
- *
  * If cfg.fillExpandedFiles() is true:
  *  - New files in pawn ranks are filled with pawns.
  *  - New files in back ranks are filled with extra pieces, so that:
@@ -31,7 +28,6 @@ import com.predixcode.core.fen.FenUtils;
  *      +3      -> knight + bishop + rook
  *      +4      -> knight + bishop + rook + queen
  *      +>4     -> above + more knights/bishops (more N/B than R, more R than Q)
- *
  * For Chess960 games (cfg.chess960() == true) we still handle board size,
  * but we skip back-rank filling; Chess960FenRule will replace the back ranks.
  */
@@ -243,8 +239,7 @@ public class BoardSizeFenRule extends AbstractStartFenRule {
 
         int h = grid.length;
         // Check all cut columns are empty.
-        for (int y = 0; y < h; y++) {
-            char[] row = grid[y];
+        for (char[] row : grid) {
             if (row.length != currentWidth) {
                 throw new IllegalStateException("Row width mismatch while shrinking width");
             }
